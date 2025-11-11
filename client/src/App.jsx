@@ -1,29 +1,32 @@
-import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
-import { SurveysPage } from "./pages/SurveysPage";
-import { SurveysFormPage } from "./pages/SurveysFormPage";
-import { SurveyDetailPage } from "./pages/SurveyDetailPage"; // 👈 import nuevo
-import Sidebar from "./components/Sidebar";
-import { Toaster } from "react-hot-toast";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import LoginPage from "./pages/LoginPage";
+import SurveysPage from "./pages/SurveysPage";
+import SurveyDetailPage from "./pages/SurveyDetailPage";
+import SurveysFormPage from "./pages/SurveysFormPage"; // ← para /surveys/new
+import ProtectedRoute from "./routes/ProtectedRoute";
+import AppLayout from "./layouts/AppLayout";
 
-function App() {
+export default function App() {
   return (
     <BrowserRouter>
-      <div className="flex h-screen">
-        <Sidebar />
-        <div className="flex-1 p-6 bg-white overflow-y-auto">
-          <Routes>
-            <Route path="/surveys" element={<SurveysPage />} />
-            <Route path="/surveys/new" element={<SurveysFormPage />} />
-            <Route path="/surveys/:id" element={<SurveyDetailPage />} /> {/* 👈 detalle */}
-            <Route path="/surveys/:id/edit" element={<SurveysFormPage />} /> {/* 👈 edición */}
-            <Route path="*" element={<Navigate to="/surveys" />} />
-            
-          </Routes>
-        </div>
-      </div>
-      <Toaster position="top-right" />
+      <Routes>
+        {/* pública */}
+        <Route path="/login" element={<LoginPage />} />
+
+        {/* todo lo protegido vive dentro del layout con Sidebar */}
+        <Route
+          element={
+            <ProtectedRoute>
+              <AppLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<SurveysPage />} />
+          <Route path="/surveys" element={<SurveysPage />} />
+          <Route path="/surveys/new" element={<SurveysFormPage />} /> {/* ← match con tu link */}
+          <Route path="/surveys/:id" element={<SurveyDetailPage />} />
+        </Route>
+      </Routes>
     </BrowserRouter>
   );
 }
-
-export default App;

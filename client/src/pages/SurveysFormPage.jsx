@@ -101,3 +101,4 @@ export function SurveysFormPage() {
     </div>
   );
 }
+export default SurveysFormPage;

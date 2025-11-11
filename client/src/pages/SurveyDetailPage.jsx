@@ -1,3 +1,4 @@
+// client/src/pages/SurveyDetailPage.jsx
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getSurvey, deleteSurvey } from "../api/surveys.api";
@@ -10,17 +11,20 @@ import {
 import { Trash2, Save, Plus, Edit } from "lucide-react";
 import { toast } from "react-hot-toast";
 
-export function SurveyDetailPage() {
-  const { id } = useParams(); // surveyId
+function SurveyDetailPage() {
+  const { id } = useParams(); // surveyId desde la URL
   const navigate = useNavigate();
+
   const [survey, setSurvey] = useState(null);
   const [questions, setQuestions] = useState([]);
 
-  // 🔹 Para nueva pregunta
+  // -------- Estado para NUEVA pregunta --------
   const [newQuestion, setNewQuestion] = useState("");
   const [newType, setNewType] = useState("text");
+  const [newRequired, setNewRequired] = useState(true);
+  const [newChoices, setNewChoices] = useState(""); // "Excelente;Bueno;Regular;Malo"
 
-  // 🔹 Para edición
+  // -------- Estado para EDICIÓN --------
   const [editingId, setEditingId] = useState(null);
   const [editingText, setEditingText] = useState("");
   const [editingType, setEditingType] = useState("text");
@@ -38,15 +42,28 @@ export function SurveyDetailPage() {
     { value: "email", label: "Correo electrónico" },
   ];
 
+  // Tipos que NECESITAN 'choices'
+  const TYPES_NEED_CHOICES = ["choice", "multi", "dropdown", "rank", "matrix"];
+
   // Cargar encuesta + preguntas
   useEffect(() => {
     async function loadSurvey() {
-      const { data } = await getSurvey(id);
-      setSurvey(data);
+      try {
+        const { data } = await getSurvey(id);
+        setSurvey(data);
+      } catch (e) {
+        toast.error("No pude cargar la encuesta");
+        console.error(e);
+      }
     }
     async function loadQuestions() {
-      const { data } = await getQuestionsBySurvey(id);
-      setQuestions(data);
+      try {
+        const { data } = await getQuestionsBySurvey(id);
+        setQuestions(data);
+      } catch (e) {
+        toast.error("No pude cargar las preguntas");
+        console.error(e);
+      }
     }
     loadSurvey();
     loadQuestions();
@@ -56,18 +73,41 @@ export function SurveyDetailPage() {
   const handleAddQuestion = async (e) => {
     e.preventDefault();
     if (!newQuestion.trim()) return;
+
     try {
-      await createQuestion(id, {
+      const payload = {
         text: newQuestion,
         question_type: newType,
-      });
+        required: newRequired,
+      };
+
+      // Solo envíamos choices si el tipo lo requiere
+      if (TYPES_NEED_CHOICES.includes(newType)) {
+        const arr = newChoices
+          .split(";")
+          .map((s) => s.trim())
+          .filter(Boolean);
+        payload.choices = arr;
+      }
+
+      // POST /api/surveys/:id/questions/
+      await createQuestion(id, payload);
+
+      // limpiar form + refrescar listado
       setNewQuestion("");
       setNewType("text");
+      setNewRequired(true);
+      setNewChoices("");
+
       toast.success("Question created");
       const { data } = await getQuestionsBySurvey(id);
       setQuestions(data);
     } catch (err) {
-      toast.error("Error creating question");
+      const msg =
+        err?.response?.data
+          ? JSON.stringify(err.response.data)
+          : "Error creating question";
+      toast.error(msg);
       console.error(err);
     }
   };
@@ -75,11 +115,15 @@ export function SurveyDetailPage() {
   // Eliminar pregunta
   const handleDeleteQuestion = async (questionId) => {
     const accepted = window.confirm("Are you sure you want to delete this question?");
-    if (accepted) {
+    if (!accepted) return;
+    try {
       await deleteQuestion(id, questionId);
       toast.success("Question deleted");
       const { data } = await getQuestionsBySurvey(id);
       setQuestions(data);
+    } catch (e) {
+      toast.error("Error deleting question");
+      console.error(e);
     }
   };
 
@@ -113,10 +157,14 @@ export function SurveyDetailPage() {
   // Eliminar encuesta
   const handleDeleteSurvey = async () => {
     const accepted = window.confirm("Are you sure you want to delete this survey?");
-    if (accepted) {
+    if (!accepted) return;
+    try {
       await deleteSurvey(id);
       toast.success("Survey deleted");
       navigate("/surveys");
+    } catch (e) {
+      toast.error("Error deleting survey");
+      console.error(e);
     }
   };
 
@@ -137,14 +185,17 @@ export function SurveyDetailPage() {
       </button>
 
       {/* Add Question */}
-      <form onSubmit={handleAddQuestion} className="flex space-x-2 mb-6">
+      <form onSubmit={handleAddQuestion} className="grid md:grid-cols-4 gap-2 mb-6">
+        {/* Texto */}
         <input
           type="text"
           placeholder="New question"
           value={newQuestion}
           onChange={(e) => setNewQuestion(e.target.value)}
-          className="flex-1 rounded-md border px-3 py-2"
+          className="rounded-md border px-3 py-2 md:col-span-2"
         />
+
+        {/* Tipo */}
         <select
           value={newType}
           onChange={(e) => setNewType(e.target.value)}
@@ -156,12 +207,37 @@ export function SurveyDetailPage() {
             </option>
           ))}
         </select>
-        <button
-          type="submit"
-          className="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-md"
-        >
-          <Plus className="mr-1 h-4 w-4" /> Add
-        </button>
+
+        {/* Requerida */}
+        <label className="inline-flex items-center gap-2 px-2 py-2">
+          <input
+            type="checkbox"
+            checked={newRequired}
+            onChange={(e) => setNewRequired(e.target.checked)}
+          />
+          Requerida
+        </label>
+
+        {/* Choices (solo si el tipo lo necesita) */}
+        {TYPES_NEED_CHOICES.includes(newType) && (
+          <input
+            type="text"
+            placeholder="Opciones separadas por ; (Ej: Excelente;Bueno;Regular;Malo)"
+            value={newChoices}
+            onChange={(e) => setNewChoices(e.target.value)}
+            className="rounded-md border px-3 py-2 md:col-span-3"
+          />
+        )}
+
+        {/* Botón */}
+        <div className="md:col-span-4">
+          <button
+            type="submit"
+            className="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-md"
+          >
+            <Plus className="mr-1 h-4 w-4" /> Add
+          </button>
+        </div>
       </form>
 
       {/* List Questions */}
@@ -199,10 +275,20 @@ export function SurveyDetailPage() {
               </form>
             ) : (
               <>
-                <span>
-                  {q.text}{" "}
-                  <span className="text-xs text-gray-500">({q.question_type})</span>
-                </span>
+                <div className="flex-1">
+                  <span>
+                    {q.text}{" "}
+                    <span className="text-xs text-gray-500">({q.question_type})</span>
+                    {q.required ? (
+                      <span className="text-xs text-gray-500 ml-2">· requerida</span>
+                    ) : null}
+                  </span>
+                  {Array.isArray(q.choices) && q.choices.length > 0 && (
+                    <div className="text-xs text-gray-600 mt-1">
+                      Opciones: {q.choices.join(" / ")}
+                    </div>
+                  )}
+                </div>
                 <div className="flex space-x-2">
                   <button
                     onClick={() => handleEditQuestion(q)}
@@ -225,3 +311,6 @@ export function SurveyDetailPage() {
     </div>
   );
 }
+
+export default SurveyDetailPage;
+export { SurveyDetailPage };

@@ -5,3 +5,5 @@ import { IdCard } from 'lucide-react';
 export function SurveysPage() {
   return <SurveysList />;
 }
+
+export default SurveysPage;
