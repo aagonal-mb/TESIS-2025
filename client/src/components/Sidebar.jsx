@@ -1,6 +1,10 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { clearAuth } from "../api/api";
 
 export default function Sidebar() {
+  const navigate = useNavigate();
+  const logout = () => { clearAuth(); navigate("/login", { replace: true }); };
+
   return (
     <div className="w-50 h-screen bg-gray-100 border-r border-gray-300 p-4">
       <h1 className="text-xl font-bold mb-5">TESIS</h1>
@@ -26,6 +30,8 @@ export default function Sidebar() {
           </li>
         </ul>
       </nav>
+
+      <button onClick={logout} className="mt-6 text-red-600">Salir</button>
     </div>
   );
 }

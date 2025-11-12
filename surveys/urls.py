@@ -12,7 +12,7 @@ survey_router = routers.NestedDefaultRouter(router, r'surveys', lookup='survey')
 survey_router.register(r'questions', QuestionViewSet, basename='survey-questions')
 
 # Nested router: questions/{id}/answers
-question_router = routers.NestedDefaultRouter(router, r'questions', lookup='question')
+question_router = routers.NestedDefaultRouter(survey_router, r'questions', lookup='question')
 question_router.register(r'answers', AnswerViewSet, basename='question-answers')
 
 urlpatterns = router.urls + survey_router.urls + question_router.urls

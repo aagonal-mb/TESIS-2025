@@ -48,6 +48,12 @@ class Question(models.Model):
     ]
     question_type = models.CharField(max_length=20, choices=QUESTION_TYPES, default="text")
     
+    # 👇 NUEVO
+    required = models.BooleanField(default=True)
+    choices = models.JSONField(default=list, blank=True, null=True)  # p/ choice, multi, dropdown, rank, etc.
+
+    def __str__(self):
+        return f"[{self.get_question_type_display()}] {self.text[:40]}"
     
 class Answer(models.Model):
     question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name="answers")
