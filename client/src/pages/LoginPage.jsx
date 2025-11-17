@@ -1,50 +1,47 @@
-// client/src/pages/LoginPage.jsx
 import { useState } from "react";
-import axios from "axios";
-import { BASE, setTokens } from "../api/api";
-import { useNavigate } from "react-router-dom";
+import api, { setTokens } from "../api/api";
+import { useAuth } from "../context/AuthContext";
 
 export default function LoginPage() {
-  const [username, setU] = useState("");
-  const [password, setP] = useState("");
-  const [error, setError] = useState(null);
-  const navigate = useNavigate();
+  const { setTokens: setCtxTokens } = useAuth?.() || {};
+  const [username, setUser] = useState("");
+  const [password, setPass] = useState("");
+  const [err, setErr]       = useState("");
+  const [loading, setLoading] = useState(false);
 
-  async function onSubmit(e) {
+  async function onSubmit(e){
     e.preventDefault();
-    setError(null);
+    setErr(""); setLoading(true);
     try {
-      const { data } = await axios.post(`${BASE}/auth/token/`, { username, password });
-      // data: { access, refresh }
-      setTokens(data);
-      navigate("/surveys");   // redirige a la lista
-    } catch {
-      setError("Usuario o contraseña inválidos");
+      // Endpoint estándar de JWT
+      const { data } = await api.post("/auth/token/", { username, password });
+      // Guardar tokens (en tu helper y en el contexto si lo usás)
+      setTokens({ access: data.access, refresh: data.refresh });
+      if (setCtxTokens) setCtxTokens({ access: data.access, refresh: data.refresh });
+      window.location.href = "/";
+    } catch (e) {
+      // Mostrar mensaje real
+      const detail = e?.response?.data?.detail;
+      setErr(detail || "No se pudo iniciar sesión");
+    } finally {
+      setLoading(false);
     }
   }
 
   return (
-    <div className="grid place-items-center h-screen">
-      <form onSubmit={onSubmit} className="bg-white p-6 rounded-lg shadow w-full max-w-sm grid gap-3">
-        <h1 className="text-xl font-semibold">Iniciar sesión</h1>
-        {error && <div className="text-red-600 text-sm">{error}</div>}
-
-        <input
-          className="border rounded px-3 py-2"
-          placeholder="Usuario"
-          value={username}
-          onChange={(e)=>setU(e.target.value)}
-        />
-
-        <input
-          className="border rounded px-3 py-2"
-          placeholder="Contraseña"
-          type="password"
-          value={password}
-          onChange={(e)=>setP(e.target.value)}
-        />
-
-        <button className="bg-blue-600 text-white rounded py-2">Entrar</button>
+    <div className="auth-wrap">
+      <form className="auth-card" onSubmit={onSubmit}>
+        <h1>Iniciar sesión</h1>
+        <div className="auth-field">
+          <label>Usuario</label>
+          <input className="auth-input" value={username} onChange={e=>setUser(e.target.value)} />
+        </div>
+        <div className="auth-field">
+          <label>Contraseña</label>
+          <input className="auth-input" type="password" value={password} onChange={e=>setPass(e.target.value)} />
+        </div>
+        {err && <div className="auth-error">{err}</div>}
+        <button className="auth-btn" disabled={loading}>{loading ? "Entrando..." : "Entrar"}</button>
       </form>
     </div>
   );

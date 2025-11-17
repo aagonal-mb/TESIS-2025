@@ -1,32 +1,43 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import LoginPage from "./pages/LoginPage";
-import SurveysPage from "./pages/SurveysPage";
-import SurveyDetailPage from "./pages/SurveyDetailPage";
-import SurveysFormPage from "./pages/SurveysFormPage"; // ← para /surveys/new
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./routes/ProtectedRoute";
-import AppLayout from "./layouts/AppLayout";
+
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
+import MePage from "./pages/MePage";
+import SurveysList from "./components/SurveysList.jsx"; // ahora existe export default
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* pública */}
-        <Route path="/login" element={<LoginPage />} />
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* públicas */}
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
 
-        {/* todo lo protegido vive dentro del layout con Sidebar */}
-        <Route
-          element={
-            <ProtectedRoute>
-              <AppLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<SurveysPage />} />
-          <Route path="/surveys" element={<SurveysPage />} />
-          <Route path="/surveys/new" element={<SurveysFormPage />} /> {/* ← match con tu link */}
-          <Route path="/surveys/:id" element={<SurveyDetailPage />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+          {/* protegidas */}
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <MePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/surveys"
+            element={
+              <ProtectedRoute>
+                <SurveysList />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* cualquier otra ruta → inicio */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }

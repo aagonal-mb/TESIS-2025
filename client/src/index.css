@@ -1,9 +1,30 @@
 @import "tailwindcss";
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+
 
 body{
   background:   #f4f8ff;  ;
   color:black;
 }
+
+:root{
+  --bg:#0f172a; --card:#111827; --muted:#94a3b8; --text:#e5e7eb;
+  --brand:#6366f1; --brand-700:#4f46e5; --ring: rgba(99,102,241,.4);
+}
+html,body,#root{height:100%;}
+body{background: radial-gradient(1200px 800px at 20% -10%, #1f2937 0, #0f172a 60%); color: var(--text);}
+.auth-wrap{min-height:100%; display:grid; place-items:center; padding:32px 16px;}
+.auth-card{width:100%; max-width:420px; background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02));
+  border:1px solid rgba(255,255,255,.06); backdrop-filter: blur(6px); border-radius:20px; box-shadow:0 10px 40px rgba(0,0,0,.35); padding:28px;}
+.auth-card h1{margin:0 0 16px; font-size:24px; letter-spacing:.2px;}
+.auth-field{display:grid; gap:6px; margin:12px 0;}
+.auth-field label{font-size:12px; color:var(--muted);}
+.auth-input{width:100%; padding:12px 14px; border-radius:12px; border:1px solid rgba(255,255,255,.08);
+  background:#0b1220; color:var(--text); outline:none; transition:.2s border,.2s box-shadow,.2s transform;}
+.auth-input:focus{border-color:var(--brand); box-shadow:0 0 0 4px var(--ring);}
+.auth-btn{width:100%; margin-top:8px; padding:12px 14px; border-radius:12px; border:1px solid transparent;
+  background:linear-gradient(90deg,var(--brand),var(--brand-700)); color:#fff; font-weight:600; cursor:pointer;
+  transition:transform .06s, filter .2s, box-shadow .2s; box-shadow:0 8px 24px rgba(99,102,241,.35);}
+.auth-btn:active{transform:translateY(1px) scale(.997);} .auth-btn:disabled{filter:grayscale(.6); opacity:.6; cursor:not-allowed;}
+.auth-error{color:#fca5a5; font-size:13px; margin-top:4px;} .auth-success{color:#86efac; font-size:13px; margin-top:4px;}
+.auth-footer{margin-top:14px; font-size:13px; color:var(--muted);} .auth-link{color:#c7d2fe; text-decoration:none; border-bottom:1px dotted transparent}
+.auth-link:hover{border-color:#c7d2fe}
