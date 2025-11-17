@@ -1,55 +1,16 @@
-# Archivos de Python
 __pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-*.pdb
-*.so
-
-# Entornos virtuales
-venv/
-env/
-.venv/
-ENV/
-
-# Configuración de VS Code / PyCharm
-.vscode/
-.idea/
-
-# Archivos de logs
-*.log
-*.pot
 *.pyc
-*.pyo
-*.pyd
-*.sqlite3
-
-# Archivos temporales
-*.swp
-*~
+.venv/
+venv/
+.env
+db.sqlite3
+media/
+staticfiles/
+client/node_modules/
+client/dist/
+client/.env
+.vscode/
 .DS_Store
 Thumbs.db
-
-# Migraciones de Django (si querés ignorarlas)
-*/migrations/__pycache__/
-*/migrations/*.py
-!*/migrations/__init__.py   # pero mantené el __init__.py
-
-# Archivos de coverage y testing
-.coverage
-htmlcov/
-.tox/
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
-.pytest_cache/
-
-# Archivos de entorno / variables locales
-.env
-.venv
-*.env
-
-# Archivos de compilación estática/media
-staticfiles/
-media/
+imports/
+node_modules/

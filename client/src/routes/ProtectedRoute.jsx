@@ -1,8 +1,15 @@
-// client/src/routes/ProtectedRoute.jsx
-import { Navigate } from "react-router-dom";
-import { isAuthed } from "../api/api";
+import { Navigate, useLocation } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 export default function ProtectedRoute({ children }) {
-  if (!isAuthed()) return <Navigate to="/login" replace />;
+  const { authed, ready } = useAuth();
+  const loc = useLocation();
+
+  // ⛔ NO redirijas hasta conocer el estado (evita parpadeos/loops)
+  if (!ready) return null;
+
+  if (!authed) {
+    return <Navigate to="/login" replace state={{ from: loc }} />;
+  }
   return children;
 }

@@ -30,6 +30,9 @@ urlpatterns = [
     # API de tu app
     path("api/", include("surveys.urls")),
 
+    # NUEVO: módulo de cuentas
+    path("api/accounts/", include("accounts.urls")),
+
     # 🔐 Auth JWT
     path("api/auth/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/auth/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
@@ -42,4 +45,5 @@ urlpatterns = [
     ), name="openapi-schema"),
     path("docs/", include_docs_urls(title="Survey API")),
 ]
+
 
