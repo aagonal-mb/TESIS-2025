@@ -1,67 +1,97 @@
-from django.contrib.auth.models import User
 from rest_framework import serializers
-from .models import Usuario, Rol
+from django.contrib.auth.models import User
+from .models import (
+    Rol,
+    Departamento,
+    Nomina,
+    Usuario,
+    ActivityLog,
+    ImportJob,
+    ImportRow,
+    Notification
+)
+
+# --- Serializers para Modelos Base ---
 
 class RolSerializer(serializers.ModelSerializer):
     class Meta:
         model = Rol
-        fields = ["id_rol","nombre_rol","permisos"]
+        fields = '__all__' # Incluye id_rol, nombre_rol, permisos
 
-class UsuarioSerializer(serializers.ModelSerializer):
-    id_rol = RolSerializer(read_only=True)
-    id_rol_id = serializers.PrimaryKeyRelatedField(
-        queryset=Rol.objects.all(), source="id_rol", write_only=True, required=False
-    )
+class DepartamentoSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Usuario
-        fields = ["id_usuario","id_rol","id_rol_id","id_nomina","id_departamento",
-                  "nombre","apellido","documento","correo","is_approved"]
+        model = Departamento
+        fields = '__all__' # Incluye id_departamento, nombre_area, seccion
 
-class UserDetailSerializer(serializers.ModelSerializer):
-    biz = UsuarioSerializer()
+class NominaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Nomina
+        fields = '__all__' # Incluye id_nomina, apellido, nombre, fecha_ingreso, departamento
+
+# --- Serializer para User (Modelo de Django Auth) ---
+
+class UserAuthSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["id","username","first_name","last_name","email","is_active","biz"]
+        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'is_active', 'date_joined')
+        read_only_fields = ('id', 'date_joined')
 
-class RegisterSerializer(serializers.Serializer):
-    username = serializers.CharField()
-    email = serializers.EmailField()
-    first_name = serializers.CharField(required=False, allow_blank=True)
-    last_name = serializers.CharField(required=False, allow_blank=True)
-    password = serializers.CharField(write_only=True, min_length=6)
+# --- Serializer Principal: Usuario de Negocio ---
 
-    def create(self, data):
-        u = User(
-            username=data["username"],
-            email=data["email"],
-            first_name=data.get("first_name",""),
-            last_name=data.get("last_name",""),
-            is_active=True,
+class UsuarioSerializer(serializers.ModelSerializer):
+    # Campos que representan relaciones con datos anidados
+    user = UserAuthSerializer(read_only=True)
+    id_rol_data = RolSerializer(source='id_rol', read_only=True)
+    id_departamento_data = DepartamentoSerializer(source='id_departamento', read_only=True)
+    
+    # Campo para la clave foránea simple (solo ID en escritura)
+    id_rol = serializers.PrimaryKeyRelatedField(queryset=Rol.objects.all(), write_only=True)
+    id_departamento = serializers.PrimaryKeyRelatedField(queryset=Departamento.objects.all(), write_only=True, allow_null=True)
+    id_nomina = serializers.PrimaryKeyRelatedField(queryset=Nomina.objects.all(), write_only=True, allow_null=True)
+
+    class Meta:
+        model = Usuario
+        fields = (
+            'id_usuario', 'nombre', 'apellido', 'documento', 'correo', 
+            'is_approved',
+            'user', 'id_rol', 'id_nomina', 'id_departamento',
+            # Campos anidados solo para lectura
+            'id_rol_data', 'id_departamento_data'
         )
-        u.set_password(data["password"])
-        u.save()
-        return u
+        read_only_fields = ('user',) # La relación OneToOne se maneja en la vista o lógica de negocio
 
-class MeUpdateSerializer(serializers.Serializer):
-    first_name = serializers.CharField(required=False, allow_blank=True)
-    last_name = serializers.CharField(required=False, allow_blank=True)
-    email = serializers.EmailField(required=False, allow_blank=True)
-    nombre = serializers.CharField(required=False, allow_blank=True)
-    apellido = serializers.CharField(required=False, allow_blank=True)
-    documento = serializers.CharField(required=False, allow_blank=True)
-    id_rol_id = serializers.IntegerField(required=False)
+# --- Serializers de Logs y Tareas de Importación ---
 
-    def update(self, user, data):
-        # auth_user
-        for f in ["first_name","last_name","email"]:
-            if f in data: setattr(user, f, data[f])
-        user.save()
-        # USUARIOS
-        b = user.biz
-        for f in ["nombre","apellido","documento"]:
-            if f in data: setattr(b, f, data[f])
-        req = self.context.get("request")
-        if "id_rol_id" in data and req and req.user.is_staff:
-            b.id_rol_id = data["id_rol_id"]
-        b.save()
-        return user
+class ActivityLogSerializer(serializers.ModelSerializer):
+    user_info = serializers.CharField(source='user.username', read_only=True) # Muestra el username del User
+    
+    class Meta:
+        model = ActivityLog
+        fields = '__all__'
+        read_only_fields = ('user', 'created_at')
+
+class ImportRowSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ImportRow
+        fields = '__all__'
+        read_only_fields = ('job',)
+
+class ImportJobSerializer(serializers.ModelSerializer):
+    # Muestra las filas relacionadas de forma anidada
+    rows = ImportRowSerializer(many=True, read_only=True) 
+    creado_por_username = serializers.CharField(source='creado_por.username', read_only=True)
+
+    class Meta:
+        model = ImportJob
+        fields = '__all__'
+        read_only_fields = ('estado', 'total', 'ok', 'errores', 'creado_por', 'created_at', 'rows')
+
+# --- Serializer de Notificaciones ---
+
+class NotificationSerializer(serializers.ModelSerializer):
+    user_username = serializers.CharField(source='user.username', read_only=True)
+    
+    class Meta:
+        model = Notification
+        fields = '__all__'
+        read_only_fields = ('user', 'created_at')
