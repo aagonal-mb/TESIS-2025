@@ -5,36 +5,78 @@ import ProtectedRoute from "./routes/ProtectedRoute";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import MePage from "./pages/MePage";
-import SurveysList from "./components/SurveysList.jsx"; // ahora existe export default
+import SurveysList from "./components/SurveysList.jsx";
+import SurveyDetailPage from "./pages/SurveyDetailPage.jsx";
+import AppLayout from "./layouts/AppLayout";   // 👈 IMPORTANTE
+import UsersAdminPage from "./pages/UsersAdminPage.jsx";
 
 export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* públicas */}
+          {/* Públicas */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
 
-          {/* protegidas */}
+          {/* Protegidas con layout + sidebar */}
           <Route
             path="/"
             element={
               <ProtectedRoute>
-                <MePage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/surveys"
-            element={
-              <ProtectedRoute>
-                <SurveysList />
+                <AppLayout>
+                  <SurveysList />
+                </AppLayout>
               </ProtectedRoute>
             }
           />
 
-          {/* cualquier otra ruta → inicio */}
+          <Route
+            path="/surveys"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <SurveysList />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/surveys/:id"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <SurveyDetailPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/me"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <MePage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
+  path="/admin/usuarios"
+  element={
+    <ProtectedRoute>
+      <AppLayout>
+        <UsersAdminPage />
+      </AppLayout>
+    </ProtectedRoute>
+  }
+/>
+
+
+          {/* Cualquier cosa rara → home */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

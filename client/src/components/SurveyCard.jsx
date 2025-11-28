@@ -1,33 +1,34 @@
-import { useNavigate } from 'react-router-dom';
-
-
+import { useNavigate } from "react-router-dom";
 
 export function SurveyCard({ survey }) {
+  const navigate = useNavigate();
 
-    const navigate = useNavigate();
+  const goDetail = () => {
+    if (!survey?.id) return;
+    navigate(`/surveys/${survey.id}`);
+  };
 
   return (
-   <div
-  className="
-    border border-gray-300  {/* borde gris suave */}
-    rounded-md              {/* esquinas redondeadas (5px) */}
-    m-1                     {/* margen pequeño */}
-    p-3                     {/* padding interno */}
-    bg-gray-50              {/* fondo gris claro */}
-    cursor-pointer           {/* cursor tipo manito */}
-    hover:bg-gray-100        {/* fondo un poco más notorio al pasar el mouse */}
-    hover:border-gray-400    {/* borde más oscuro en hover */}
-  "
-
-      onClick={() => navigate(`/surveys/${survey.id}`)}
-
-       
+    <div
+      onClick={goDetail}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => e.key === "Enter" && goDetail()}
+      style={{
+        background: "#f9fafb",
+        borderRadius: 12,
+        padding: 16,
+        border: "1px solid #e5e7eb",
+        cursor: "pointer",
+        boxShadow: "0 1px 2px rgba(15,23,42,0.08)",
+      }}
     >
-      <h1 className='font-bold uppercase'>{survey.title}</h1>
-      <p>{survey.description}</p>
-      
+      <h3 style={{ margin: 0, marginBottom: 4, color: "#111827", fontWeight: 600 }}>
+        {survey.title}
+      </h3>
+      <p style={{ margin: 0, color: "#6b7280", fontSize: 14 }}>
+        {survey.description || "Sin descripción"}
+      </p>
     </div>
   );
 }
-
-

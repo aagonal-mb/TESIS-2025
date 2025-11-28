@@ -1,15 +1,19 @@
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 export default function ProtectedRoute({ children }) {
   const { authed, ready } = useAuth();
-  const loc = useLocation();
 
-  // ⛔ NO redirijas hasta conocer el estado (evita parpadeos/loops)
-  if (!ready) return null;
-
-  if (!authed) {
-    return <Navigate to="/login" replace state={{ from: loc }} />;
+  // Mientras el AuthContext está chequeando el token
+  if (!ready) {
+    return null; // si querés, poné un loader acá
   }
+
+  // Si no está autenticado → lo mando al login
+  if (!authed) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Si está autenticado → muestro lo que me pasen como children
   return children;
 }
