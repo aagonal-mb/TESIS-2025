@@ -1,30 +1,427 @@
 @import "tailwindcss";
 
-
-body{
-  background:   #f4f8ff;  ;
-  color:black;
+/* Paleta y variables */
+:root {
+  --bg: #0f172a;
+  --card: #111827;
+  --muted: #94a3b8;
+  --text: #e5e7eb;
+  --brand: #6366f1;
+  --brand-700: #4f46e5;
+  --ring: rgba(99, 102, 241, 0.4);
 }
 
-:root{
-  --bg:#0f172a; --card:#111827; --muted:#94a3b8; --text:#e5e7eb;
-  --brand:#6366f1; --brand-700:#4f46e5; --ring: rgba(99,102,241,.4);
+html,
+body,
+#root {
+  height: 100%;
 }
-html,body,#root{height:100%;}
-body{background: radial-gradient(1200px 800px at 20% -10%, #1f2937 0, #0f172a 60%); color: var(--text);}
-.auth-wrap{min-height:100%; display:grid; place-items:center; padding:32px 16px;}
-.auth-card{width:100%; max-width:420px; background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02));
-  border:1px solid rgba(255,255,255,.06); backdrop-filter: blur(6px); border-radius:20px; box-shadow:0 10px 40px rgba(0,0,0,.35); padding:28px;}
-.auth-card h1{margin:0 0 16px; font-size:24px; letter-spacing:.2px;}
-.auth-field{display:grid; gap:6px; margin:12px 0;}
-.auth-field label{font-size:12px; color:var(--muted);}
-.auth-input{width:100%; padding:12px 14px; border-radius:12px; border:1px solid rgba(255,255,255,.08);
-  background:#0b1220; color:var(--text); outline:none; transition:.2s border,.2s box-shadow,.2s transform;}
-.auth-input:focus{border-color:var(--brand); box-shadow:0 0 0 4px var(--ring);}
-.auth-btn{width:100%; margin-top:8px; padding:12px 14px; border-radius:12px; border:1px solid transparent;
-  background:linear-gradient(90deg,var(--brand),var(--brand-700)); color:#fff; font-weight:600; cursor:pointer;
-  transition:transform .06s, filter .2s, box-shadow .2s; box-shadow:0 8px 24px rgba(99,102,241,.35);}
-.auth-btn:active{transform:translateY(1px) scale(.997);} .auth-btn:disabled{filter:grayscale(.6); opacity:.6; cursor:not-allowed;}
-.auth-error{color:#fca5a5; font-size:13px; margin-top:4px;} .auth-success{color:#86efac; font-size:13px; margin-top:4px;}
-.auth-footer{margin-top:14px; font-size:13px; color:var(--muted);} .auth-link{color:#c7d2fe; text-decoration:none; border-bottom:1px dotted transparent}
-.auth-link:hover{border-color:#c7d2fe}
+
+/* Fondo general + tipografía */
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: radial-gradient(1200px 800px at 20% -10%, #1f2937 0, #0f172a 60%);
+  color: var(--text);
+}
+
+/* ---------------- LOGIN (auth) ---------------- */
+
+.auth-wrap {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 32px 16px;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02));
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(6px);
+  border-radius: 20px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+  padding: 28px;
+}
+
+.auth-card h1 {
+  margin: 0 0 16px;
+  font-size: 24px;
+  letter-spacing: 0.2px;
+}
+
+.auth-field {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0;
+}
+
+.auth-field label {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.auth-input{
+  width:100%;
+  padding:12px 14px;
+  border-radius:12px;
+  border:1px solid #d1d5db;   /* gris suave */
+  background:#ffffff;         /* fondo blanco */
+  color:#111827;              /* texto oscuro */
+  outline:none;
+  transition:.2s border,.2s box-shadow,.2s transform;
+}
+.auth-input:focus{
+  border-color:#6366f1;
+  box-shadow:0 0 0 3px rgba(99,102,241,.25);
+}
+
+
+.auth-input:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 4px var(--ring);
+}
+
+.auth-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: linear-gradient(90deg, var(--brand), var(--brand-700));
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.06s, filter 0.2s, box-shadow 0.2s;
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.35);
+}
+
+.auth-btn:active {
+  transform: translateY(1px) scale(0.997);
+}
+
+.auth-btn:disabled {
+  filter: grayscale(0.6);
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.auth-error {
+  color: #fca5a5;
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.auth-success {
+  color: #86efac;
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.auth-footer {
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.auth-link {
+  color: #c7d2fe;
+  text-decoration: none;
+  border-bottom: 1px dotted transparent;
+}
+
+.auth-link:hover {
+  border-color: #c7d2fe;
+}
+
+/* ---------------- LAYOUT CON SIDEBAR (app-*) ---------------- */
+
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+  /* sin background acá, que use el del body */
+}
+
+/* Lateral */
+.app-sidebar {
+  width: 260px;
+  padding: 24px 20px;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(12px);
+  border-right: 1px solid rgba(148, 163, 184, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.app-logo {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #e5e7eb;
+}
+
+/* Links */
+.app-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.app-nav a {
+  display: block;
+  padding: 6px 4px;
+  color: #9ca3af;
+  text-decoration: none;
+  font-size: 0.95rem;
+  border-radius: 6px;
+  transition: background 0.2s, color 0.2s, transform 0.1s;
+}
+
+.app-nav a:hover {
+  background: rgba(148, 163, 184, 0.12);
+  color: #e5e7eb;
+  transform: translateX(2px);
+}
+
+.app-nav a.active {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #f9fafb;
+}
+
+/* Usuario abajo */
+.app-user {
+  margin-top: auto;
+  font-size: 0.9rem;
+  color: #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.app-user-name {
+  font-weight: 500;
+}
+
+/* Botón salir */
+.app-logout-btn {
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: none;
+  background: #f97373;
+  color: white;
+  cursor: pointer;
+  font-size: 0.85rem;
+  align-self: flex-start;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.app-logout-btn:hover {
+  background: #ef4444;
+  transform: translateY(-1px);
+}
+
+/* Zona principal */
+.app-main {
+  flex: 1;
+  padding: 32px 40px;
+  color: #f9fafb;
+}
+
+/* 🎨 TEMA CLARO PARA LA APP */
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #f3f4f6;          /* gris muy clarito */
+  color: #111827;               /* texto gris oscuro */
+}
+
+/* Layout principal */
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+  background: #f3f4f6;
+  color: #111827;
+}
+
+/* Sidebar clarita */
+.app-sidebar {
+  width: 260px;
+  padding: 24px 20px;
+  background: #e5e7eb;          /* gris claro */
+  border-right: 1px solid #d1d5db;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.app-logo {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+/* Links del menú */
+.app-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.app-nav a {
+  display: block;
+  padding: 6px 4px;
+  color: #374151;              /* gris medio */
+  text-decoration: none;
+  font-size: 0.95rem;
+  border-radius: 6px;
+  transition: background 0.2s, color 0.2s, transform 0.1s;
+}
+
+.app-nav a:hover {
+  background: #d1d5db;
+  color: #111827;
+  transform: translateX(2px);
+}
+
+.app-nav a.active {
+  background: #4f46e5;         /* violeta */
+  color: #ffffff;
+}
+
+/* Usuario abajo */
+.app-user {
+  margin-top: auto;
+  font-size: 0.9rem;
+  color: #111827;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.app-user-name {
+  font-weight: 500;
+}
+
+/* Botón salir */
+.app-logout-btn {
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: none;
+  background: #ef4444;
+  color: white;
+  cursor: pointer;
+  font-size: 0.85rem;
+  align-self: flex-start;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.app-logout-btn:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+}
+
+/* Zona de contenido principal */
+.app-main {
+  flex: 1;
+  padding: 32px 40px;
+  background: #ffffff;         /* blanco, tipo “tarjeta grande” */
+  box-shadow: 0 0 0 1px #e5e7eb inset;
+}
+
+
+/* --- Admin usuarios --- */
+
+.admin-users {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.admin-users__header h1 {
+  font-size: 24px;
+  margin-bottom: 4px;
+  font-weight: 600;
+  color: #0f172a;  /* texto bien oscuro */
+}
+
+.admin-users__header p {
+  margin: 0 0 16px;
+  color: #64748b;
+  font-size: 14px;
+}
+
+
+.admin-users__header p {
+  margin: 0 0 16px;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.admin-users__card {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+  padding: 16px 20px;
+}
+
+.admin-users__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.admin-users__table th,
+.admin-users__table td {
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.admin-users__table thead th {
+  border-bottom: 1px solid #e2e8f0;
+  font-weight: 600;
+  color: #475569;
+}
+
+.admin-users__table tbody tr:nth-child(even) {
+  background: #f8fafc;
+}
+
+/* badges */
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.badge--ok {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.badge--pending {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+/* botón aprobar */
+.btn-approve {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: none;
+  background: #4f46e5;
+  color: white;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.btn-approve:hover {
+  background: #4338ca;
+}
+
+.admin-users__error {
+  color: #b91c1c;
+}

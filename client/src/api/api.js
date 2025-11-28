@@ -3,7 +3,7 @@ import axios from "axios";
 export const BASE = "http://127.0.0.1:8000/api";
 
 // instancia base para TODAS las llamadas
-const api = axios.create({ baseURL: BASE });
+const api = axios.create({ baseURL: "http://127.0.0.1:8000/api/" });
 
 // helpers para tokens en localStorage
 export function getAccess()  { return localStorage.getItem("access"); }

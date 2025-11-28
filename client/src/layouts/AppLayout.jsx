@@ -1,15 +1,50 @@
-import { Outlet } from "react-router-dom";
-import Sidebar from "../components/Sidebar"; // Sidebar tiene export default
+// client/src/layouts/AppLayout.jsx
+import { NavLink, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
-export default function AppLayout() {
+export default function AppLayout({ children }) {
+  const { user, signOut } = useAuth();
+  const nav = useNavigate();
+
+  const handleLogout = () => {
+    signOut();
+    nav("/login");
+  };
+
+  const isAdmin =
+    user?.rol === "admin" ||
+    user?.isSuperuser === true ||
+    user?.is_superuser === true;
+
   return (
-    <div className="flex min-h-screen">
-      <aside className="w-64 border-r bg-white">
-        <Sidebar />
+    <div className="app-shell">
+      <aside className="app-sidebar">
+        <div className="app-logo">HR Surveys</div>
+
+        <nav className="app-nav">
+          <NavLink to="/" end>
+            Encuestas
+          </NavLink>
+          <NavLink to="/me">Mi perfil</NavLink>
+
+          {/* Solo para admin / superuser */}
+          {isAdmin && (
+            <NavLink to="/admin/usuarios">
+              Usuarios
+            </NavLink>
+          )}
+        </nav>
+
+        <div className="app-user">
+          <div className="app-user-name">{user?.username}</div>
+          <button className="app-logout-btn" onClick={handleLogout}>
+            Cerrar sesión
+          </button>
+        </div>
       </aside>
-      <main className="flex-1 p-6 bg-gray-50">
-        <Outlet />
-      </main>
+
+      <main className="app-main">{children}</main>
     </div>
   );
 }
+

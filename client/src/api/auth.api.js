@@ -1,28 +1,22 @@
 // client/src/api/auth.api.js
-import api from "./api";
+import apiClient from "./apiClient";
 
-// POST /api/accounts/register/
-export function register({ username, email, password }) {
-  return api.post("/accounts/register/", { username, email, password });
+// 👉 Login: pide token JWT
+export async function loginApi({ username, password }) {
+  const res = await apiClient.post("/api/auth/token/", {
+    username,
+    password,
+  });
+  return res.data; // { access, refresh }
 }
 
-// POST /api/accounts/login/  → guarda tokens (ya refresca el interceptor)
-export async function login({ username, password }) {
-  const { data } = await api.post("/accounts/login/", { username, password });
-  localStorage.setItem("access", data.access);
-  localStorage.setItem("refresh", data.refresh);
-  return data;
+// 👉 Registro: crea User + Usuario en backend
+// Mantengo el nombre que tu front ya usaba: "register"
+export async function register(payload) {
+  // payload: { username, password, nombre, apellido, correo, documento, ... }
+  const res = await apiClient.post("/api/auth/register/", payload);
+  return res.data; // devuelve el Usuario creado
 }
 
-// GET /api/accounts/me/
-export function me() {
-  return api.get("/accounts/me/");
-}
-
-// POST /api/accounts/logout/
-export async function logout() {
-  const refresh = localStorage.getItem("refresh");
-  await api.post("/accounts/logout/", { refresh });
-  localStorage.removeItem("access");
-  localStorage.removeItem("refresh");
-}
+// Alias opcional por si en algún lado usamos registerApi
+export const registerApi = register;
