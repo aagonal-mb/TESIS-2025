@@ -9,7 +9,7 @@ from rest_framework.documentation import include_docs_urls
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 urlpatterns = [
-path("admin/", admin.site.urls),
+path("", admin.site.urls),
 
 # ----------------------------- API PROPIA -----------------------------
 # Rutas de encuestas (surveys)
