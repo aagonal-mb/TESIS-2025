@@ -8,3 +8,4 @@ export const getAnswersByQuestion = (questionId) =>
 export const createAnswer = (answer) => api.post('answers/', answer);
 // DELETE eliminar respuesta
 export const deleteAnswer = (id) => api.delete(`answers/${id}/`);
+export const getAllAnswers = () => api.get("surveys/answers/");

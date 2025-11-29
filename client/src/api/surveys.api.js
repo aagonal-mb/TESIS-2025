@@ -1,14 +1,16 @@
 // client/src/api/surveys.api.js
 import api from "./api";
 
-// LISTAR TODAS LAS ENCUESTAS
+// LISTAR todas las encuestas
 export const getAllSurveys = () => api.get("surveys/surveys/");
 
-// TRAER UNA ENCUESTA POR ID
+// OBTENER una encuesta
 export const getSurvey = (id) => api.get(`surveys/surveys/${id}/`);
 
-// CRUD extra (si los usás después)
+// CREAR encuesta
 export const createSurvey = (survey) => api.post("surveys/surveys/", survey);
+
+// (Opcional, para más adelante)
 export const deleteSurvey = (id) => api.delete(`surveys/surveys/${id}/`);
 export const updateSurvey = (id, survey) =>
   api.put(`surveys/surveys/${id}/`, survey);
