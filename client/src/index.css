@@ -239,98 +239,119 @@ body {
 }
 
 /* Layout principal */
+/* Layout general */
 .app-shell {
   display: flex;
   min-height: 100vh;
-  background: #f3f4f6;
+  background: #f5f5fb;
   color: #111827;
 }
 
-/* Sidebar clarita */
 .app-sidebar {
   width: 260px;
   padding: 24px 20px;
-  background: #e5e7eb;          /* gris claro */
-  border-right: 1px solid #d1d5db;
+  border-right: 1px solid #e5e7eb;
+  background: #f9fafb;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
 }
 
 .app-logo {
-  font-size: 1.25rem;
   font-weight: 600;
-  color: #111827;
+  font-size: 1rem;
 }
 
-/* Links del menú */
+/* NAV principal */
 .app-nav {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-top: 8px;
+  gap: 4px;
 }
 
 .app-nav a {
-  display: block;
-  padding: 6px 4px;
-  color: #374151;              /* gris medio */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  color: #4b5563;
   text-decoration: none;
-  font-size: 0.95rem;
-  border-radius: 6px;
-  transition: background 0.2s, color 0.2s, transform 0.1s;
+  font-size: 0.9rem;
 }
 
 .app-nav a:hover {
-  background: #d1d5db;
-  color: #111827;
-  transform: translateX(2px);
+  background: #eef2ff;
+  color: #3730a3;
 }
 
 .app-nav a.active {
-  background: #4f46e5;         /* violeta */
+  background: #4f46e5;
   color: #ffffff;
 }
 
-/* Usuario abajo */
+/* Grupos (Encuestas / Usuarios) */
+.app-group {
+  margin-top: 10px;
+}
+
+.app-group-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #9ca3af;
+  margin: 6px 0 4px;
+}
+
+.app-subnav {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-left: 18px; /* pequeña indentación */
+}
+
+/* Iconitos */
+.app-nav-icon {
+  font-size: 1rem;
+}
+
+/* Usuario + botón salir */
 .app-user {
   margin-top: auto;
-  font-size: 0.9rem;
-  color: #111827;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  font-size: 0.85rem;
 }
 
 .app-user-name {
-  font-weight: 500;
+  color: #4b5563;
 }
 
-/* Botón salir */
 .app-logout-btn {
   padding: 6px 10px;
-  border-radius: 999px;
+  border-radius: 6px;
   border: none;
-  background: #ef4444;
-  color: white;
+  background: #fee2e2;
+  color: #b91c1c;
   cursor: pointer;
   font-size: 0.85rem;
-  align-self: flex-start;
-  transition: background 0.2s, transform 0.1s;
 }
 
 .app-logout-btn:hover {
-  background: #dc2626;
-  transform: translateY(-1px);
+  background: #fecaca;
 }
 
-/* Zona de contenido principal */
+/* Contenido principal */
 .app-main {
   flex: 1;
-  padding: 32px 40px;
-  background: #ffffff;         /* blanco, tipo “tarjeta grande” */
-  box-shadow: 0 0 0 1px #e5e7eb inset;
+  padding: 32px 48px;
+  background: #ffffff;
 }
+
 
 
 /* --- Admin usuarios --- */
@@ -424,4 +445,94 @@ body {
 
 .admin-users__error {
   color: #b91c1c;
+}
+
+.survey-card {
+  display: block;
+  padding: 16px 20px;
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+  text-decoration: none;
+  color: #0f172a;
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+  margin-bottom: 12px;
+}
+
+.survey-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.1);
+}
+
+/* ----- Encuestas: detalle y formulario ----- */
+.survey-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.survey-question {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.survey-label {
+  font-weight: 500;
+  color: #111827;
+}
+
+.survey-required {
+  color: #ef4444;
+  margin-left: 4px;
+}
+
+.survey-input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  color: #111827;
+  font-size: 0.95rem;
+  outline: none;
+  transition: 0.15s border, 0.15s box-shadow;
+}
+
+.survey-input:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--ring);
+}
+
+.form-error {
+  color: #b91c1c;
+  font-size: 0.9rem;
+}
+
+.form-success {
+  color: #166534;
+  font-size: 0.9rem;
+}
+
+.app-section-label {
+  margin-top: 24px;
+  margin-bottom: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9ca3af;
+}
+
+.app-nav-link {
+  display: block;
+  padding: 6px 0;
+  color: #4b5563;
+  text-decoration: none;
+  font-size: 0.95rem;
+}
+
+.app-nav-link.active {
+  color: #111827;
+  font-weight: 600;
 }

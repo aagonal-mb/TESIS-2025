@@ -15,3 +15,9 @@ export const deleteQuestion = (surveyId, id) =>
 // PUT actualizar pregunta
 export const updateQuestion = (surveyId, id, question) =>
   api.put(`surveys/${surveyId}/questions/${id}/`, question);
+
+// client/src/api/questions.api.js
+import api from "./api";
+
+export const getAllQuestions = () => api.get("surveys/questions/");
+

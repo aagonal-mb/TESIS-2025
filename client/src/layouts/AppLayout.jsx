@@ -19,26 +19,74 @@ export default function AppLayout({ children }) {
   return (
     <div className="app-shell">
       <aside className="app-sidebar">
-        <div className="app-logo">HR Surveys</div>
+        <div className="app-logo">TESIS · HR Surveys</div>
 
         <nav className="app-nav">
+          {/* INICIO */}
           <NavLink to="/" end>
-            Encuestas
+            <span>Inicio</span>
           </NavLink>
-          <NavLink to="/me">Mi perfil</NavLink>
 
-          {/* Solo para admin / superuser */}
+          {/* ENCUESTAS */}
+          <div className="app-group">
+            <div className="app-group-title">Encuestas</div>
+            <div className="app-subnav">
+              <NavLink to="/surveys" end>
+                <span>Encuestas</span>
+              </NavLink>
+
+              {isAdmin && (
+                <>
+                  <NavLink to="/surveys/new">
+                    <span>Crear encuestas</span>
+                  </NavLink>
+
+                  <NavLink to="/surveys/responses">
+                    <span>Encuestas respondidas</span>
+                  </NavLink>
+
+                  {/* página futura, si querés la usás */}
+                  <NavLink to="/surveys/sent">
+                    <span>Encuestas enviadas</span>
+                  </NavLink>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* USUARIOS – solo admin */}
           {isAdmin && (
-            <NavLink to="/admin/usuarios">
-              Usuarios
+            <div className="app-group">
+              <div className="app-group-title">Usuarios</div>
+              <div className="app-subnav">
+                <NavLink to="/admin/usuarios/new">
+                  <span>Crear usuario</span>
+                </NavLink>
+                <NavLink to="/admin/usuarios">
+                  <span>Modificar usuario</span>
+                </NavLink>
+              </div>
+            </div>
+          )}
+
+          {/* REPORTES – placeholder */}
+          {isAdmin && (
+            <NavLink to="/reports">
+              <span>Reportes</span>
             </NavLink>
           )}
+
+          {/* MI PERFIL */}
+          <NavLink to="/me">
+            <span>Mi perfil</span>
+          </NavLink>
         </nav>
 
+        {/* Usuario + logout */}
         <div className="app-user">
           <div className="app-user-name">{user?.username}</div>
           <button className="app-logout-btn" onClick={handleLogout}>
-            Cerrar sesión
+            Salir
           </button>
         </div>
       </aside>
@@ -47,4 +95,3 @@ export default function AppLayout({ children }) {
     </div>
   );
 }
-
