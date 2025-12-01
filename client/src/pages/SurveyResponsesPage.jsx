@@ -1,124 +1,180 @@
 // client/src/pages/SurveyResponsesPage.jsx
 import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 import api from "../api/api";
 import { useAuth } from "../context/AuthContext";
+import { getSurvey } from "../api/surveys.api";
 
 export default function SurveyResponsesPage() {
+  const { id } = useParams(); // id de la encuesta
   const { user } = useAuth();
+
+  const [survey, setSurvey] = useState(null);
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
 
-  useEffect(() => {
-    let alive = true;
+  const isAdmin =
+    user?.rol === "admin" ||
+    user?.isSuperuser === true ||
+    user?.is_superuser === true;
 
-    async function load() {
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadData() {
       setErr("");
       setLoading(true);
       try {
-        const [surveysRes, questionsRes, answersRes] = await Promise.all([
-          api.get("surveys/surveys/"),
-          api.get("surveys/questions/"),
-          api.get("surveys/answers/"),
-        ]);
+        // Traemos: encuesta, sus preguntas, todas las respuestas y los usuarios
+        const [surveyRes, questionsRes, answersRes, usuariosRes] =
+          await Promise.all([
+            getSurvey(id),
+            api.get(`surveys/surveys/${id}/questions/`),
+            api.get("surveys/answers/"),
+            api.get("accounts/usuarios/"),
+          ]);
 
-        const surveys = Array.isArray(surveysRes.data) ? surveysRes.data : [];
-        const questions = Array.isArray(questionsRes.data) ? questionsRes.data : [];
-        const answers = Array.isArray(answersRes.data) ? answersRes.data : [];
+        if (cancelled) return;
 
-        // Mapeo pregunta → encuesta
-        const questionToSurvey = {};
+        const surveyData = surveyRes.data;
+        const questions = Array.isArray(questionsRes.data)
+          ? questionsRes.data
+          : [];
+        const answers = Array.isArray(answersRes.data)
+          ? answersRes.data
+          : [];
+        const usuarios = Array.isArray(usuariosRes.data)
+          ? usuariosRes.data
+          : [];
+
+        // Map: preguntaId -> objeto pregunta
+        const questionById = new Map();
         questions.forEach((q) => {
-          if (q.id != null && q.survey != null) {
-            questionToSurvey[q.id] = q.survey;
+          if (q && q.id != null) {
+            questionById.set(q.id, q);
           }
         });
 
-        // Conteo de respuestas por encuesta
-        const counts = {};
-        answers.forEach((a) => {
-          const surveyId = questionToSurvey[a.question];
-          if (!surveyId) return;
-          counts[surveyId] = (counts[surveyId] || 0) + 1;
+        // Map: authUserId -> nombre lindo
+        const userNameByAuthId = new Map();
+        usuarios.forEach((u) => {
+          const authId = u.user && u.user.id;
+          if (authId == null) return;
+
+          const fullName = `${u.nombre || ""} ${u.apellido || ""}`.trim();
+          const fallback = (u.user && u.user.username) || `Usuario ${authId}`;
+          const name = fullName || fallback;
+
+          userNameByAuthId.set(authId, name);
         });
 
-        const tableRows = surveys.map((s) => ({
-          id: s.id,
-          title: s.title,
-          created_at: s.created_at,
-          totalResponses: counts[s.id] || 0,
-        }));
+        // Armamos filas solo con respuestas de ESTA encuesta
+        const tableRows = answers
+          .filter((a) => questionById.has(a.question))
+          .map((a) => {
+            const q = questionById.get(a.question);
+            const userName =
+              userNameByAuthId.get(a.user) || `Usuario ${a.user}`;
+            return {
+              id: a.id,
+              questionText: q.text,
+              userName,
+              response: a.response,
+            };
+          });
 
-        if (alive) setRows(tableRows);
+        setSurvey(surveyData);
+        setRows(tableRows);
       } catch (e) {
         console.error(e);
-        if (alive) setErr("No se pudo cargar las encuestas respondidas.");
+        setErr("No se pudieron cargar las respuestas de esta encuesta.");
       } finally {
-        if (alive) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
 
-    load();
+    loadData();
     return () => {
-      alive = false;
+      cancelled = true;
     };
-  }, []);
+  }, [id]);
 
-  if (!user) return null;
-
-  if (loading) return <div style={{ padding: 24 }}>Cargando encuestas…</div>;
-
-  if (err)
+  if (!isAdmin) {
     return (
-      <div style={{ padding: 24, color: "#b91c1c" }}>
-        {err}
+      <div style={{ padding: 24 }}>
+        No tenés permisos para ver esta página.
       </div>
     );
+  }
 
   return (
-    <div style={{ maxWidth: 1000, margin: "2rem auto", padding: "0 1.5rem" }}>
-      <h2 style={{ fontSize: "1.4rem", fontWeight: 600, color: "#111827" }}>
-        Encuestas respondidas
-      </h2>
-      <p style={{ color: "#6b7280", marginBottom: 16 }}>
-        Visualizá cuántas respuestas tiene cada encuesta.
-      </p>
+    <div style={{ maxWidth: 900, margin: "0 auto", paddingTop: 24 }}>
+      <div style={{ marginBottom: 16 }}>
+        <h1 style={{ fontSize: 24, marginBottom: 4 }}>
+          Respuestas de la encuesta
+        </h1>
+        {survey && (
+          <>
+            <div style={{ fontSize: 18, fontWeight: 600 }}>
+              {survey.title}
+            </div>
+            {survey.description && (
+              <p style={{ marginTop: 4, color: "#6b7280" }}>
+                {survey.description}
+              </p>
+            )}
+          </>
+        )}
+      </div>
 
-      {rows.length === 0 ? (
-        <div style={{ color: "#4b5563" }}>Todavía no hay respuestas.</div>
-      ) : (
-        <table
+      {loading && <div>Cargando respuestas...</div>}
+      {err && <div style={{ color: "#dc2626" }}>{err}</div>}
+
+      {!loading && !err && rows.length === 0 && (
+        <div style={{ color: "#6b7280" }}>
+          Todavía no hay respuestas registradas para esta encuesta.
+        </div>
+      )}
+
+      {!loading && !err && rows.length > 0 && (
+        <div
           style={{
-            width: "100%",
-            borderCollapse: "collapse",
-            marginTop: 8,
-            background: "#ffffff",
             borderRadius: 12,
+            border: "1px solid #e5e7eb",
             overflow: "hidden",
-            boxShadow: "0 1px 3px rgba(15,23,42,.06)",
+            background: "#ffffff",
           }}
         >
-          <thead style={{ background: "#f9fafb" }}>
-            <tr>
-              <th style={thStyle}>Nombre de encuesta</th>
-              <th style={thStyle}>Respuestas</th>
-              <th style={thStyle}>Fecha de creación</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.id} style={{ borderTop: "1px solid #e5e7eb" }}>
-                <td style={tdStyle}>{row.title}</td>
-                <td style={tdStyle}>{row.totalResponses}</td>
-                <td style={tdStyle}>
-                  {row.created_at
-                    ? new Date(row.created_at).toLocaleDateString()
-                    : "-"}
-                </td>
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+            }}
+          >
+            <thead style={{ background: "#f9fafb" }}>
+              <tr>
+                <th style={thStyle}>Colaborador</th>
+                <th style={thStyle}>Pregunta</th>
+                <th style={thStyle}>Respuesta</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr
+                  key={row.id}
+                  style={{ borderTop: "1px solid #e5e7eb" }}
+                >
+                  <td style={tdStyle}>{row.userName}</td>
+                  <td style={tdStyle}>{row.questionText}</td>
+                  <td style={tdStyle}>{row.response}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );
@@ -127,14 +183,15 @@ export default function SurveyResponsesPage() {
 const thStyle = {
   textAlign: "left",
   padding: "10px 16px",
-  fontSize: "0.8rem",
+  fontSize: 12,
   textTransform: "uppercase",
-  letterSpacing: "0.05em",
+  letterSpacing: "0.04em",
   color: "#6b7280",
+  fontWeight: 600,
 };
 
 const tdStyle = {
   padding: "10px 16px",
-  fontSize: "0.9rem",
+  fontSize: 14,
   color: "#111827",
 };

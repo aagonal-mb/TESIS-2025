@@ -57,6 +57,16 @@ export default function LoginPage() {
           {loading ? "Entrando..." : "Entrar"}
         </button>
 
+                <div className="auth-footer">
+          ¿Olvidaste tu contraseña?{" "}
+          <Link to="/forgot-password" className="auth-link">
+            Recuperarla
+          </Link>
+        </div>
+
+       
+
+
         {/* 👇 ESTE BLOQUE NUEVO ES EL TEXTO “NO TENÉS CUENTA? REGISTRATE” */}
         <div className="auth-footer">
           ¿No tenés cuenta?{" "}

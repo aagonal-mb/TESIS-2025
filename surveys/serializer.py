@@ -7,21 +7,39 @@ class SurveySerializer(serializers.ModelSerializer):
         model = Survey
         fields = ["id", "title", "description", "created_at", "status"]
 
-# Permite que el form HTML de DRF mande "" en choices sin romper
+# --- CAMPOS PERSONALIZADOS ---
+
+# Permite que el form HTML de DRF mande "" en campos de tipo JSON
 class EmptyStringJSONField(serializers.JSONField):
     def to_internal_value(self, data):
         if data in ("", None):
             return None
         return super().to_internal_value(data)
 
+class ChoicesStringListField(serializers.CharField):
+    """
+    Convierte un string separado por punto y coma (;) en una lista de strings.
+    Esto permite que el frontend envíe 'opcion1;opcion2'.
+    """
+    def to_internal_value(self, data):
+        if data in ("", None):
+            return None
+        if isinstance(data, str):
+            # Convierte el string "opcion1;opcion2" a la lista ['opcion1', 'opcion2']
+            return [c.strip() for c in data.split(';') if c.strip()]
+        
+        # Si por alguna razón recibimos una lista, la validación posterior la manejará
+        return data
+
+# --- SERIALIZERS ---
+
 class QuestionSerializer(serializers.ModelSerializer):
-    # choices puede venir vacío o null
-    choices = EmptyStringJSONField(required=False, allow_null=True)
+    # Usamos el campo personalizado para manejar la entrada del frontend
+    choices = ChoicesStringListField(required=False, allow_null=True)
 
     class Meta:
         model = Question
         fields = ["id", "survey", "text", "question_type", "required", "choices"]
-        # No obligamos a mandar 'survey' cuando usamos ruta anidada
         extra_kwargs = {
             "survey": {"required": False},
             "text": {"required": True},
@@ -30,6 +48,7 @@ class QuestionSerializer(serializers.ModelSerializer):
         }
 
     def validate(self, attrs):
+        # La lógica de validación ahora recibe 'choices' como una lista o None
         qtype = attrs.get("question_type", getattr(self.instance, "question_type", "text"))
         choices = attrs.get("choices", None)
 
@@ -41,19 +60,30 @@ class QuestionSerializer(serializers.ModelSerializer):
         }
 
         if qtype in types_need:
+            # Aquí la validación espera una lista y revisa su longitud
             if not choices or not isinstance(choices, list) or len(choices) < 2:
                 raise serializers.ValidationError(
                     "Para este tipo de pregunta se requieren al menos 2 opciones en 'choices'."
                 )
+        
+        # Si el tipo no necesita choices pero se enviaron (como en 'text')
         if qtype in types_forbid and choices:
+            # Si choices es una lista de strings (lo que devuelve ChoicesStringListField),
+            # entonces este error se dispara correctamente.
             raise serializers.ValidationError("Este tipo de pregunta no debe incluir 'choices'.")
+            
         return attrs
 
 class AnswerSerializer(serializers.ModelSerializer):
     # Alias amistoso para escribir/leer 'value'
     response = serializers.CharField(source="value")
 
+    # 💡 Sugerencia: Añadir el tipo de pregunta para el frontend (lectura)
+    # Esto es crucial para que AnswerCard.jsx sepa cómo formatear la respuesta.
+    question_type = serializers.CharField(source='question.question_type', read_only=True)
+
     class Meta:
         model = Answer
-        fields = ["id", "question", "user", "response"]
+        # Añade 'question_type' a los fields de salida
+        fields = ["id", "question", "user", "response", "question_type"] 
         extra_kwargs = {"user": {"required": False}}

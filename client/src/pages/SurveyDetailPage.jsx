@@ -4,207 +4,190 @@ import { useParams, useNavigate } from "react-router-dom";
 import { getSurvey } from "../api/surveys.api";
 import api from "../api/api";
 import { useAuth } from "../context/AuthContext";
+import QuestionAnswerItem from "../components/QuestionAnswerItem"; 
 
 export default function SurveyDetailPage() {
-  const { id } = useParams();
-  const nav = useNavigate();
-  const { user } = useAuth();
+ const { id } = useParams();
+ const nav = useNavigate();
+ const { user } = useAuth();
 
-  const [survey, setSurvey] = useState(null);
-  const [questions, setQuestions] = useState([]);
-  const [answers, setAnswers] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+ const [survey, setSurvey] = useState(null);
+ const [questions, setQuestions] = useState([]);
+ const [answers, setAnswers] = useState({}); 
+ const [loading, setLoading] = useState(true);
+ const [saving, setSaving] = useState(false);
+ const [error, setError] = useState("");
+ const [success, setSuccess] = useState("");
 
-  // 👑 quién es admin
-  const isAdmin =
-    user?.rol === "admin" ||
-    user?.isSuperuser === true ||
-    user?.is_superuser === true;
+ const isAdmin =
+ user?.rol === "admin" ||
+ user?.isSuperuser === true ||
+ user?.is_superuser === true;
 
-  useEffect(() => {
-    async function load() {
-      setError("");
-      setSuccess("");
-      setLoading(true);
-      try {
-        const [surveyRes, questionsRes] = await Promise.all([
-          getSurvey(id),
-          api.get("surveys/questions/"),
-        ]);
+ // --- Carga Inicial ---
+ useEffect(() => {
+ async function load() {
+ setError("");
+ setSuccess("");
+ setLoading(true);
+ try {
+ const [surveyRes, questionsRes] = await Promise.all([
+ getSurvey(id),
+ api.get("surveys/questions/"),
+ ]);
+ 
+ setSurvey(surveyRes.data);
+ const allQuestions = Array.isArray(questionsRes.data) ? questionsRes.data : [];
+ const filtered = allQuestions.filter((q) => String(q.survey) === String(id));
+ 
+ // 💡 Importante: El campo 'choices' debe ser un array para el AnswerItem.
+ // Asumiendo que el backend te envía un string separado por ; (ej: "opt1;opt2"), 
+ // lo convertimos aquí si es necesario (si Django ya lo hace, omite esta parte):
+ const processedQuestions = filtered.map(q => ({
+ ...q,
+ // Si choices es un string y no es nulo, lo divide en un array
+ choices: (typeof q.choices === 'string' && q.choices) ? q.choices.split(';') : q.choices || [],
+ }));
 
-        setSurvey(surveyRes.data);
+ setQuestions(processedQuestions);
 
-        // Solo preguntas de ESTA encuesta
-        const allQuestions = Array.isArray(questionsRes.data)
-          ? questionsRes.data
-          : [];
-        const filtered = allQuestions.filter(
-          (q) => String(q.survey) === String(id)
-        );
-        setQuestions(filtered);
-      } catch (e) {
-        console.error(e);
-        setError("No se pudo cargar la encuesta.");
-      } finally {
-        setLoading(false);
-      }
-    }
+ } catch (e) {
+ console.error(e);
+ setError("No se pudo cargar la encuesta o sus preguntas.");
+ } finally {
+ setLoading(false);
+ }
+ }
 
-    load();
-  }, [id]);
+ load();
+ }, [id]);
 
-  const handleChange = (questionId, value) => {
-    setAnswers((prev) => ({ ...prev, [questionId]: value }));
-  };
+ // --- Manejo de Cambios ---
+ const handleChange = (questionId, value) => {
+ setAnswers((prev) => ({ ...prev, [questionId]: value }));
+ };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setSuccess("");
+ // --- Envío del Formulario ---
+ const handleSubmit = async (e) => {
+ e.preventDefault();
+ setError("");
+ setSuccess("");
 
-    if (!questions.length) {
-      setError("Esta encuesta no tiene preguntas.");
-      return;
-    }
+ if (!questions.length) {
+ setError("Esta encuesta no tiene preguntas.");
+ return;
+ }
 
-    const payloads = questions
-      .filter((q) => answers[q.id] !== undefined && answers[q.id] !== "")
-      .map((q) => ({
-        question: q.id,
-        user: user?.idUsuario, // id_usuario que ya usamos
-        response: answers[q.id],
-      }));
+ const payloads = questions
+ .filter((q) => answers[q.id] !== undefined && answers[q.id] !== "" && answers[q.id] !== null) 
+ .map((q) => ({
+ question: q.id,
+ user: user?.idUsuario, 
+ // ✅ CORRECCIÓN FINAL: Usamos 'response' para que coincida con el Serializer
+ response: answers[q.id], 
+ }));
 
-    if (!payloads.length) {
-      setError("Respondé al menos una pregunta antes de enviar.");
-      return;
-    }
+ if (!payloads.length) {
+ setError("Respondé al menos una pregunta antes de enviar.");
+ return;
+ }
+ 
+ const requiredQuestions = questions.filter(q => q.required);
+ const missingRequired = requiredQuestions.some(q => !answers[q.id] || answers[q.id] === "");
 
-    setSaving(true);
-    try {
-      await Promise.all(payloads.map((p) => api.post("surveys/answers/", p)));
-      setSuccess("Tus respuestas se guardaron correctamente 🙌");
-    } catch (e) {
-      console.error(e);
-      setError("No se pudieron guardar las respuestas.");
-    } finally {
-      setSaving(false);
-    }
-  };
+ if (missingRequired) {
+ setError("Por favor, respondé todas las preguntas obligatorias (*).");
+ return;
+ }
 
-  // 🔌 acá después Ema mete su <TypeQuestion /> si quiere
-  const renderInputFor = (q) => {
-    const value = answers[q.id] ?? "";
+ setSaving(true);
+ try {
+ await Promise.all(payloads.map((p) => api.post("surveys/answers/", p)));
+ setSuccess("Tus respuestas se guardaron correctamente 🙌");
+ setAnswers({}); 
+ 
+ } catch (e) {
+ console.error(e);
+ // Muestra los detalles del error para depuración
+ const errorDetail = e.response?.data ? JSON.stringify(e.response.data) : "No se pudieron guardar las respuestas.";
+ setError(`Error al guardar: ${errorDetail}`); 
+ } finally {
+ setSaving(false);
+ }
+ };
 
-    if (q.question_type === "scale") {
-      return (
-        <select
-          className="auth-input"
-          value={value}
-          onChange={(e) => handleChange(q.id, e.target.value)}
-        >
-          <option value="">Seleccioná un valor</option>
-          <option value="1">1 - Muy malo</option>
-          <option value="2">2</option>
-          <option value="3">3 - Normal</option>
-          <option value="4">4</option>
-          <option value="5">5 - Excelente</option>
-        </select>
-      );
-    }
+ // --- Renderizado ---
+ if (loading) return <div style={{ padding: 24 }}>Cargando encuesta...</div>;
 
-    return (
-      <textarea
-        className="auth-input"
-        rows={3}
-        value={value}
-        onChange={(e) => handleChange(q.id, e.target.value)}
-      />
-    );
-  };
+ if (error)
+ return (
+ <div style={{ padding: 24, color: "#dc2626" }}>
+ {error}
+ </div>
+ );
 
-  if (loading) return <div style={{ padding: 24 }}>Cargando encuesta...</div>;
+ if (!survey)
+ return <div style={{ padding: 24 }}>No se encontró la encuesta.</div>;
 
-  if (error)
-    return (
-      <div style={{ padding: 24, color: "#dc2626" }}>
-        {error}
-      </div>
-    );
+ return (
+ <div style={{ maxWidth: 800, margin: "2rem auto", padding: "0 1rem" }}>
+ <h1 style={{ marginBottom: 8, fontSize: "2rem" }}>{survey.title}</h1>
 
-  if (!survey)
-    return <div style={{ padding: 24 }}>No se encontró la encuesta.</div>;
+ {survey.description && (
+ <p style={{ marginBottom: 16, color: "#4b5563" }}>
+ {survey.description}
+ </p>
+ )}
 
-  return (
-    <div style={{ maxWidth: 800, margin: "0 auto" }}>
-      <h1 style={{ marginBottom: 8 }}>{survey.title}</h1>
+{isAdmin && (
+  <button
+    type="button"
+    className="auth-btn"
+    style={{ maxWidth: 220, marginBottom: 20 }}
+    onClick={() => nav(`/reports/surveys/${survey.id}`)}  // 👈 cambio acá
+  >
+    Ver resultados
+  </button>
+)}
 
-      {survey.description && (
-        <p style={{ marginBottom: 16, color: "#4b5563" }}>
-          {survey.description}
-        </p>
-      )}
 
-      {/* 🔍 Botón solo para admin: ver resultados */}
-      {isAdmin && (
-        <button
-          type="button"
-          className="auth-btn"
-          style={{ maxWidth: 220, marginBottom: 20 }}
-          onClick={() => nav(`/surveys/${survey.id}/results`)}
-        >
-          Ver resultados
-        </button>
-      )}
+ {success && (
+ <div style={{ marginBottom: 16, color: "#16a34a" }}>
+ {success}
+ </div>
+ )}
+ {error && (
+ <div style={{ marginBottom: 16, color: "#dc2626" }}>
+ {error}
+ </div>
+ )}
 
-      {success && (
-        <div style={{ marginBottom: 16, color: "#16a34a" }}>
-          {success}
-        </div>
-      )}
-      {error && (
-        <div style={{ marginBottom: 16, color: "#dc2626" }}>
-          {error}
-        </div>
-      )}
+ {questions.length === 0 ? (
+ <p style={{ color: "#4b5563", marginTop: "1rem" }}>
+ Esta encuesta todavía no tiene preguntas.
+ </p>
+ ) : (
+ <form onSubmit={handleSubmit}>
+ {questions.map((q) => (
+ <div key={q.id}>
+ <QuestionAnswerItem
+ question={q}
+ currentResponse={answers[q.id]}
+ onResponseChange={handleChange}
+ />
+ </div>
+ ))}
 
-      {questions.length === 0 ? (
-        <p style={{ color: "#4b5563", marginTop: "1rem" }}>
-          Esta encuesta todavía no tiene preguntas.
-        </p>
-      ) : (
-        <form onSubmit={handleSubmit}>
-          {questions.map((q) => (
-            <div key={q.id} style={{ marginBottom: 16 }}>
-              <label
-                style={{
-                  display: "block",
-                  marginBottom: 6,
-                  fontWeight: 500,
-                  color: "#111827",
-                }}
-              >
-                {q.text}{" "}
-                {q.required && <span style={{ color: "#dc2626" }}>*</span>}
-              </label>
-
-              {renderInputFor(q)}
-            </div>
-          ))}
-
-          <button
-            className="auth-btn"
-            type="submit"
-            disabled={saving}
-            style={{ maxWidth: 220 }}
-          >
-            {saving ? "Guardando..." : "Enviar respuestas"}
-          </button>
-        </form>
-      )}
-    </div>
-  );
+ <button
+ className="auth-btn"
+ type="submit"
+ disabled={saving}
+ style={{ maxWidth: 220, marginTop: "1rem" }}
+ >
+ {saving ? "Guardando..." : "Enviar respuestas"}
+ </button>
+ </form>
+ )}
+ </div>
+ );
 }

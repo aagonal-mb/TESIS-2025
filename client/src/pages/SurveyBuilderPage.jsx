@@ -4,12 +4,28 @@ import { useNavigate } from "react-router-dom";
 import api from "../api/api";
 import { createSurvey } from "../api/surveys.api";
 import { useAuth } from "../context/AuthContext";
+import QuestionBuilderItem from "../components/QuestionBuilderItem";
+
+const QUESTION_TYPES = [
+  { value: "text", label: "Texto corto" },
+  { value: "longtext", label: "Texto largo" },
+  { value: "bool", label: "Verdadero/Falso" },
+  { value: "scale", label: "Escala 1–5" },
+  { value: "rating", label: "Valoración (Estrellas)" },
+  { value: "choice", label: "Opción única (Radio)" },
+  { value: "multi", label: "Selección múltiple (Checkbox)" },
+  { value: "dropdown", label: "Desplegable (Select)" },
+  { value: "number", label: "Número" },
+  { value: "date", label: "Fecha" },
+  // { value: "rank", label: "Clasificación (Ranking)" }, // si querés dejarlo para más adelante
+];
+
 
 export default function SurveyBuilderPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [questions, setQuestions] = useState([
-    { id: 1, text: "", question_type: "text", required: true },
+    { id: 1, text: "", question_type: "text", required: true, choices: [] },
   ]);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
@@ -39,6 +55,7 @@ export default function SurveyBuilderPage() {
         text: "",
         question_type: "text",
         required: false,
+        choices: [],
       },
     ]);
   };
@@ -51,6 +68,10 @@ export default function SurveyBuilderPage() {
 
   const removeQuestion = (qid) => {
     setQuestions((prev) => prev.filter((q) => q.id !== qid));
+  };
+
+  const updateChoices = (qid, newChoices) => {
+    updateQuestion(qid, "choices", newChoices);
   };
 
   const handleSubmit = async (e) => {
@@ -81,27 +102,44 @@ export default function SurveyBuilderPage() {
 
       // 2) Crear cada pregunta asociada
       await Promise.all(
-        validQuestions.map((q) =>
-          api.post("surveys/questions/", {
+        validQuestions.map((q) => {
+          // Tipos que REQUIEREN el campo 'choices'
+          const typesThatNeedChoices = [
+            "choice",
+            "multi",
+            "dropdown",
+            "rank",
+            "matrix",
+          ];
+
+          const choicesToSend = typesThatNeedChoices.includes(q.question_type)
+            ? q.choices.filter((c) => c.trim() !== "").join(";")
+            : null;
+
+          return api.post("surveys/questions/", {
             survey: survey.id,
             text: q.text,
-            question_type: q.question_type, // "text" o "scale"
+            question_type: q.question_type,
             required: q.required,
-            choices: null, // para scale no hace falta
-          })
-        )
+            choices: choicesToSend,
+          });
+        })
       );
 
       setSuccess("Encuesta creada correctamente 🙌");
-      // Limpio formulario o mando al listado:
+
+      // Limpiar formulario
       setTitle("");
       setDescription("");
       setQuestions([
-        { id: 1, text: "", question_type: "text", required: true },
+        {
+          id: 1,
+          text: "",
+          question_type: "text",
+          required: true,
+          choices: [],
+        },
       ]);
-
-      // si preferís, podés navegar directo a la lista:
-      // navigate("/surveys");
     } catch (e) {
       console.error(e);
       setErr("No se pudo crear la encuesta.");
@@ -111,26 +149,35 @@ export default function SurveyBuilderPage() {
   };
 
   return (
-    <div style={{ maxWidth: 900, margin: "2rem auto", padding: "0 1rem" }}>
-      <h1>Crear nueva encuesta</h1>
-      <p style={{ color: "#6b7280", marginBottom: "1.5rem" }}>
-        Definí el título, descripción y las preguntas. Luego se podrá responder
-        desde el listado de encuestas.
-      </p>
+    <div style={{ maxWidth: 1000, margin: "0 auto" }}>
+      {/* HEADER */}
+      <div style={{ marginBottom: 16 }}>
+        <h1
+          style={{
+            fontSize: 24,
+            margin: 0,
+            fontWeight: 700,
+            color: "#111827",
+          }}
+        >
+          Crear encuesta
+        </h1>
+        <p style={{ margin: 0, color: "#6b7280" }}>
+          Definí el título, descripción y las preguntas.
+        </p>
+      </div>
 
+      {/* MENSAJES */}
       {err && (
-        <div style={{ marginBottom: 12, color: "#dc2626" }}>
-          {err}
-        </div>
+        <div style={{ marginBottom: 12, color: "#dc2626" }}>{err}</div>
       )}
       {success && (
-        <div style={{ marginBottom: 12, color: "#16a34a" }}>
-          {success}
-        </div>
+        <div style={{ marginBottom: 12, color: "#16a34a" }}>{success}</div>
       )}
 
+      {/* FORMULARIO */}
       <form onSubmit={handleSubmit}>
-        {/* Título */}
+        {/* Título y Descripción */}
         <div className="auth-field">
           <label>Título de la encuesta</label>
           <input
@@ -141,7 +188,6 @@ export default function SurveyBuilderPage() {
           />
         </div>
 
-        {/* Descripción */}
         <div className="auth-field">
           <label>Descripción (opcional)</label>
           <textarea
@@ -149,7 +195,7 @@ export default function SurveyBuilderPage() {
             rows={3}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Breve descripción para que el colaborador entienda de qué se trata."
+            placeholder="Breve descripción..."
           />
         </div>
 
@@ -157,92 +203,22 @@ export default function SurveyBuilderPage() {
 
         <h2 style={{ marginBottom: 8 }}>Preguntas</h2>
         <p style={{ color: "#6b7280", marginBottom: 16 }}>
-          Podés mezclar preguntas abiertas y escala 1–5.
+          Podés usar {QUESTION_TYPES.length} tipos de pregunta diferentes.
         </p>
 
-        {questions.map((q, idx) => (
-          <div
+                {questions.map((q, idx) => (
+          <QuestionBuilderItem
             key={q.id}
-            style={{
-              marginBottom: 16,
-              padding: 16,
-              borderRadius: 12,
-              border: "1px solid #e5e7eb",
-              background: "#f9fafb",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                marginBottom: 8,
-              }}
-            >
-              <strong>Pregunta {idx + 1}</strong>
-              {questions.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => removeQuestion(q.id)}
-                  style={{
-                    border: "none",
-                    background: "transparent",
-                    color: "#ef4444",
-                    cursor: "pointer",
-                    fontSize: 13,
-                  }}
-                >
-                  Eliminar
-                </button>
-              )}
-            </div>
-
-            <div className="auth-field">
-              <label>Texto de la pregunta</label>
-              <input
-                className="auth-input"
-                value={q.text}
-                onChange={(e) =>
-                  updateQuestion(q.id, "text", e.target.value)
-                }
-                placeholder='Ej: "¿Cómo evaluás el clima laboral?"'
-              />
-            </div>
-
-            <div
-              style={{
-                display: "flex",
-                gap: 16,
-                flexWrap: "wrap",
-                alignItems: "center",
-              }}
-            >
-              <div className="auth-field" style={{ flex: "0 0 200px" }}>
-                <label>Tipo</label>
-                <select
-                  className="auth-input"
-                  value={q.question_type}
-                  onChange={(e) =>
-                    updateQuestion(q.id, "question_type", e.target.value)
-                  }
-                >
-                  <option value="text">Texto libre</option>
-                  <option value="scale">Escala 1–5</option>
-                </select>
-              </div>
-
-              <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <input
-                  type="checkbox"
-                  checked={q.required}
-                  onChange={(e) =>
-                    updateQuestion(q.id, "required", e.target.checked)
-                  }
-                />
-                Obligatoria
-              </label>
-            </div>
-          </div>
+            question={q}
+            index={idx}
+            types={QUESTION_TYPES}
+            updateQuestion={updateQuestion}
+            updateChoices={updateChoices}
+            removeQuestion={removeQuestion}
+            canRemove={questions.length > 1}
+          />
         ))}
+
 
         <button
           type="button"
