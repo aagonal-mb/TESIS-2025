@@ -1,3 +1,4 @@
+// client/src/components/SurveysList.jsx
 import { useEffect, useState } from "react";
 import { getAllSurveys } from "../api/surveys.api";
 import { SurveyCard } from "./SurveyCard";
@@ -5,7 +6,7 @@ import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 
 export default function SurveysList() {
-  const [surveys, setSurveys] = useState([]);
+  const [allSurveys, setAllSurveys] = useState([]); // Cambié el nombre para mayor claridad
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -22,13 +23,18 @@ export default function SurveysList() {
     (async () => {
       try {
         const res = await getAllSurveys();
+        
+        // Maneja respuesta simple o paginada
         const data = Array.isArray(res.data)
           ? res.data
           : res.data?.results ?? [];
-        if (alive) setSurveys(data);
+          
+        if (alive) setAllSurveys(data);
+
       } catch (e) {
         console.error("Error cargando encuestas", e);
-        setErr(e?.response?.data?.detail || "Error cargando encuestas");
+        // Si hay error 401/403, el mensaje de detalle es más útil
+        setErr(e?.response?.data?.detail || "Error cargando encuestas. ¿Token expirado?");
       } finally {
         if (alive) setLoading(false);
       }
@@ -38,6 +44,12 @@ export default function SurveysList() {
     };
   }, []);
 
+  // FILTRADO: Mostrar solo activas al usuario normal, todas al administrador
+  const filteredSurveys = isAdmin 
+    ? allSurveys 
+    : allSurveys.filter(survey => survey.status === true);
+
+
   if (loading) {
     return <div style={{ padding: 24 }}>Cargando encuestas…</div>;
   }
@@ -45,14 +57,14 @@ export default function SurveysList() {
   if (err) {
     return (
       <div style={{ padding: 24, color: "#b91c1c" }}>
-        {err}
+        Error: {err}
       </div>
     );
   }
 
   return (
     <div style={{ maxWidth: 900, margin: "2rem auto", padding: "0 1.5rem" }}>
-      {/* título + botón de nueva encuesta (solo admin) */}
+      {/* Título y botón */}
       <div
         style={{
           display: "flex",
@@ -62,7 +74,7 @@ export default function SurveysList() {
         }}
       >
         <h2 style={{ fontSize: "1.4rem", fontWeight: 600, color: "#111827" }}>
-          Encuestas
+          Encuestas Disponibles
         </h2>
 
         {isAdmin && (
@@ -77,9 +89,9 @@ export default function SurveysList() {
         )}
       </div>
 
-      {surveys.length === 0 ? (
+      {filteredSurveys.length === 0 ? (
         <div style={{ marginTop: 12, color: "#4b5563" }}>
-          No hay encuestas.
+          No hay encuestas {isAdmin ? 'creadas' : 'activas'} para mostrar.
         </div>
       ) : (
         <ul
@@ -90,9 +102,10 @@ export default function SurveysList() {
             marginTop: 16,
           }}
         >
-          {surveys.map((survey) => (
+          {filteredSurveys.map((survey) => (
             <li key={survey.id || survey.id_encuesta}>
-              <SurveyCard survey={survey} />
+              {/* 💡 SurveyCard manejará el click para navegar */}
+              <SurveyCard survey={survey} isAdmin={isAdmin} /> 
             </li>
           ))}
         </ul>

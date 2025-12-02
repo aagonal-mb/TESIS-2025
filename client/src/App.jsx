@@ -14,6 +14,7 @@ import SurveyBuilderPage from "./pages/SurveyBuilderPage.jsx";
 import UsersAdminPage from "./pages/UsersAdminPage.jsx";
 import AdminCreateUserPage from "./pages/AdminCreateUserPage.jsx";
 import AdminSurveyResponsesPage from "./pages/AdminSurveyResponsesPage.jsx";
+import SurveyResponsesPage from "./pages/SurveyResponsesPage.jsx";
 
 import AppLayout from "./layouts/AppLayout";
 
@@ -22,11 +23,11 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* públicas */}
+          {/* público */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
 
-          {/* protegidas con layout */}
+          {/* inicio = listado de encuestas */}
           <Route
             path="/"
             element={
@@ -38,6 +39,7 @@ export default function App() {
             }
           />
 
+          {/* mismo listado, pero en /surveys */}
           <Route
             path="/surveys"
             element={
@@ -49,6 +51,7 @@ export default function App() {
             }
           />
 
+          {/* crear encuestas */}
           <Route
             path="/surveys/new"
             element={
@@ -60,7 +63,7 @@ export default function App() {
             }
           />
 
-          {/* 🔹 ACÁ VA TU PÁGINA DE ENCUESTAS RESPONDIDAS */}
+          {/* encuestas respondidas (tabla resumen) */}
           <Route
             path="/surveys/responses"
             element={
@@ -72,6 +75,35 @@ export default function App() {
             }
           />
 
+          {/* detalle de respuestas de UNA encuesta */}
+          <Route
+            path="/admin/surveys/:id/responses"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <SurveyResponsesPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* placeholder de encuestas enviadas (para que no rompa) */}
+          <Route
+            path="/surveys/sent"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <div style={{ padding: 24 }}>
+                    La sección "Encuestas enviadas" está planificada para
+                    próximos módulos. En esta entrega se priorizó la creación
+                    y respuesta de encuestas.
+                  </div>
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* ver detalle y responder encuesta */}
           <Route
             path="/surveys/:id"
             element={
@@ -83,7 +115,7 @@ export default function App() {
             }
           />
 
-          {/* usuarios admin */}
+          {/* admin usuarios */}
           <Route
             path="/admin/usuarios"
             element={
@@ -106,7 +138,21 @@ export default function App() {
             }
           />
 
-          {/* perfil */}
+          {/* placeholder reportes generales */}
+          <Route
+            path="/reports"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <div style={{ padding: 24 }}>
+                    Módulo de reportes generales en desarrollo.
+                  </div>
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* mi perfil */}
           <Route
             path="/me"
             element={
