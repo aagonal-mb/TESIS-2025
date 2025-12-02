@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import api from "../api/api";
 import { createSurvey } from "../api/surveys.api";
 import { useAuth } from "../context/AuthContext";
-import QuestionBuilderItem from "../components/QuestionBuilderItem"; 
+import QuestionBuilderItem from "../components/QuestionBuilderItem";
 
 const QUESTION_TYPES = [
   { value: "text", label: "Texto corto" },
@@ -17,20 +17,15 @@ const QUESTION_TYPES = [
   { value: "dropdown", label: "Desplegable (Select)" },
   { value: "number", label: "Número" },
   { value: "date", label: "Fecha" },
-  { value: "time", label: "Hora" },
-  { value: "email", label: "Correo electrónico" },
-  { value: "phone", label: "Número de teléfono" },
-  { value: "address", label: "Dirección" },
-  { value: "matrix", label: "Matriz" },
-  { value: "rank", label: "Clasificación (Ranking)" },
-  { value: "other", label: "Otro" },
+  // { value: "rank", label: "Clasificación (Ranking)" }, // si querés dejarlo para más adelante
 ];
+
 
 export default function SurveyBuilderPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [questions, setQuestions] = useState([
-    { id: 1, text: "", question_type: "text", required: true, choices: [] }, 
+    { id: 1, text: "", question_type: "text", required: true, choices: [] },
   ]);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
@@ -74,9 +69,9 @@ export default function SurveyBuilderPage() {
   const removeQuestion = (qid) => {
     setQuestions((prev) => prev.filter((q) => q.id !== qid));
   };
-  
+
   const updateChoices = (qid, newChoices) => {
-      updateQuestion(qid, "choices", newChoices);
+    updateQuestion(qid, "choices", newChoices);
   };
 
   const handleSubmit = async (e) => {
@@ -108,33 +103,43 @@ export default function SurveyBuilderPage() {
       // 2) Crear cada pregunta asociada
       await Promise.all(
         validQuestions.map((q) => {
-          
           // Tipos que REQUIEREN el campo 'choices'
-          const typesThatNeedChoices = ["choice", "multi", "dropdown", "rank", "matrix"]; 
-          
+          const typesThatNeedChoices = [
+            "choice",
+            "multi",
+            "dropdown",
+            "rank",
+            "matrix",
+          ];
+
           const choicesToSend = typesThatNeedChoices.includes(q.question_type)
-            // Si el tipo lo requiere, formatea las opciones a string separado por ;
-            ? q.choices.filter(c => c.trim() !== "").join(";") 
-            : null; // Los demás tipos (text, date, number, etc.) envían null
-            
+            ? q.choices.filter((c) => c.trim() !== "").join(";")
+            : null;
+
           return api.post("surveys/questions/", {
             survey: survey.id,
             text: q.text,
-            question_type: q.question_type, 
+            question_type: q.question_type,
             required: q.required,
-            choices: choicesToSend, // Enviamos el string (o null)
+            choices: choicesToSend,
           });
         })
       );
 
       setSuccess("Encuesta creada correctamente 🙌");
+
       // Limpiar formulario
       setTitle("");
       setDescription("");
       setQuestions([
-        { id: 1, text: "", question_type: "text", required: true, choices: [] },
+        {
+          id: 1,
+          text: "",
+          question_type: "text",
+          required: true,
+          choices: [],
+        },
       ]);
-
     } catch (e) {
       console.error(e);
       setErr("No se pudo crear la encuesta.");
@@ -144,12 +149,25 @@ export default function SurveyBuilderPage() {
   };
 
   return (
-    <div style={{ maxWidth: 900, margin: "2rem auto", padding: "0 1rem" }}>
-      <h1>Crear nueva encuesta</h1>
-      <p style={{ color: "#6b7280", marginBottom: "1.5rem" }}>
-        Definí el título, descripción y las preguntas.
-      </p>
+    <div style={{ maxWidth: 1000, margin: "0 auto" }}>
+      {/* HEADER */}
+      <div style={{ marginBottom: 16 }}>
+        <h1
+          style={{
+            fontSize: 24,
+            margin: 0,
+            fontWeight: 700,
+            color: "#111827",
+          }}
+        >
+          Crear encuesta
+        </h1>
+        <p style={{ margin: 0, color: "#6b7280" }}>
+          Definí el título, descripción y las preguntas.
+        </p>
+      </div>
 
+      {/* MENSAJES */}
       {err && (
         <div style={{ marginBottom: 12, color: "#dc2626" }}>{err}</div>
       )}
@@ -157,8 +175,9 @@ export default function SurveyBuilderPage() {
         <div style={{ marginBottom: 12, color: "#16a34a" }}>{success}</div>
       )}
 
+      {/* FORMULARIO */}
       <form onSubmit={handleSubmit}>
-        {/* Título y Descripción ... */}
+        {/* Título y Descripción */}
         <div className="auth-field">
           <label>Título de la encuesta</label>
           <input
@@ -187,18 +206,19 @@ export default function SurveyBuilderPage() {
           Podés usar {QUESTION_TYPES.length} tipos de pregunta diferentes.
         </p>
 
-        {questions.map((q, idx) => (
+                {questions.map((q, idx) => (
           <QuestionBuilderItem
             key={q.id}
             question={q}
             index={idx}
             types={QUESTION_TYPES}
             updateQuestion={updateQuestion}
-            updateChoices={updateChoices} 
+            updateChoices={updateChoices}
             removeQuestion={removeQuestion}
             canRemove={questions.length > 1}
           />
         ))}
+
 
         <button
           type="button"

@@ -21,224 +21,236 @@ export default function SurveyResultsPage() {
     user?.is_superuser === true;
 
   useEffect(() => {
+    let alive = true;
+
     async function load() {
       setErr("");
       setLoading(true);
       try {
-        // 1) encuesta
-        const surveyRes = await getSurvey(id);
+        const [surveyRes, questionsRes, answersRes] = await Promise.all([
+          getSurvey(id),
+          api.get(`surveys/surveys/${id}/questions/`),
+          api.get("surveys/answers/"),
+        ]);
 
-        // 2) preguntas
-        const qRes = await api.get("surveys/questions/");
+        if (!alive) return;
 
-        // 3) respuestas
-        const aRes = await api.get("surveys/answers/");
-
-        setSurvey(surveyRes.data);
-
-        const allQuestions = Array.isArray(qRes.data) ? qRes.data : [];
-        const surveyQuestions = allQuestions.filter(
-          (q) => String(q.survey) === String(id)
-        );
-        setQuestions(surveyQuestions);
-
-        const allAnswers = Array.isArray(aRes.data) ? aRes.data : [];
-        setAnswers(allAnswers);
+        setSurvey(surveyRes.data || null);
+        setQuestions(questionsRes.data || []);
+        setAnswers(answersRes.data || []);
       } catch (e) {
         console.error(e);
-        setErr("No se pudieron cargar los resultados.");
+        setErr("No se pudieron cargar los resultados de la encuesta.");
       } finally {
-        setLoading(false);
+        if (alive) setLoading(false);
       }
     }
 
     load();
+    return () => {
+      alive = false;
+    };
   }, [id]);
 
-  // agrupar respuestas por pregunta
   const grouped = useMemo(() => {
-    const byQuestion = {};
-    const questionIds = questions.map((q) => q.id);
+    if (!questions.length) return [];
 
-    answers
-      .filter((a) => questionIds.includes(a.question))
-      .forEach((a) => {
-        if (!byQuestion[a.question]) byQuestion[a.question] = [];
-        byQuestion[a.question].push(a);
+    const byQuestionId = new Map();
+
+    // Inicializar grupos
+    questions.forEach((q) => {
+      byQuestionId.set(q.id, {
+        question: q,
+        answers: [],
       });
+    });
 
-    return byQuestion;
-  }, [answers, questions]);
+    // Asignar respuestas a cada pregunta
+    answers.forEach((a) => {
+      const group = byQuestionId.get(a.question);
+      if (group) {
+        group.answers.push(a);
+      }
+    });
+
+    return Array.from(byQuestionId.values());
+  }, [questions, answers]);
 
   if (!isAdmin) {
     return (
       <div style={{ padding: 24 }}>
-        No tenés permisos para ver los resultados de las encuestas.
+        No tenés permisos para ver esta página.
       </div>
     );
   }
-
-  if (loading) {
-    return <div style={{ padding: 24 }}>Cargando resultados…</div>;
-  }
-
-  if (err) {
-    return (
-      <div style={{ padding: 24, color: "#b91c1c" }}>
-        {err}
-      </div>
-    );
-  }
-
-  if (!survey) {
-    return <div style={{ padding: 24 }}>No se encontró la encuesta.</div>;
-  }
-
-  const totalRespuestas = Object.values(grouped).reduce(
-    (acc, arr) => acc + arr.length,
-    0
-  );
 
   return (
-    <div style={{ maxWidth: 900, margin: "0 auto", padding: "0 1.5rem" }}>
-      <h1 style={{ fontSize: "1.6rem", fontWeight: 600, marginBottom: 4 }}>
-        Resultados: {survey.title}
-      </h1>
-      {survey.description && (
-        <p style={{ color: "#4b5563", marginBottom: 12 }}>
-          {survey.description}
-        </p>
+    <div style={{ maxWidth: 900, margin: "0 auto" }}>
+      <div style={{ marginBottom: 16 }}>
+        <h1 style={{ fontSize: 24, marginBottom: 4 }}>
+          KPIs de encuesta
+        </h1>
+        {survey && (
+          <>
+            <div style={{ fontSize: 18, fontWeight: 600 }}>
+              {survey.title}
+            </div>
+            {survey.description && (
+              <p style={{ marginTop: 4, color: "#6b7280" }}>
+                {survey.description}
+              </p>
+            )}
+          </>
+        )}
+      </div>
+
+      {loading && <div>Cargando resultados...</div>}
+      {err && <div style={{ color: "#dc2626" }}>{err}</div>}
+
+      {!loading && !err && grouped.length === 0 && (
+        <div>No hay preguntas registradas para esta encuesta.</div>
       )}
 
-      <p style={{ color: "#6b7280", marginBottom: 24 }}>
-        Total de respuestas registradas:{" "}
-        <strong>{totalRespuestas || 0}</strong>
-      </p>
-
-      {questions.length === 0 ? (
-        <p>Esta encuesta todavía no tiene preguntas.</p>
-      ) : (
+      {!loading && !err && grouped.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          {questions.map((q) => {
-            const respuestas = grouped[q.id] || [];
+          {grouped.map(({ question, answers }) => {
+            const total = answers.length;
 
-            // si es escala 1-5 calculamos promedio y distribución
-            let stats = null;
-            if (q.question_type === "scale" && respuestas.length > 0) {
-              const nums = respuestas
-                .map((r) => Number(r.response))
+            let numericAvg = null;
+            let distribution = null;
+
+            if (
+              question.question_type === "scale" ||
+              question.question_type === "number"
+            ) {
+              const nums = answers
+                .map((a) => Number(a.response))
                 .filter((n) => !Number.isNaN(n));
 
-              const prom =
-                nums.length > 0
-                  ? nums.reduce((acc, n) => acc + n, 0) / nums.length
-                  : null;
+              if (nums.length) {
+                const sum = nums.reduce((acc, n) => acc + n, 0);
+                numericAvg = sum / nums.length;
 
-              const conteo = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-              nums.forEach((n) => {
-                if (conteo[n] !== undefined) conteo[n] += 1;
-              });
-
-              stats = { prom, conteo, total: nums.length };
+                const dist = {};
+                nums.forEach((n) => {
+                  const key = String(n);
+                  dist[key] = (dist[key] || 0) + 1;
+                });
+                distribution = dist;
+              }
             }
 
             return (
               <div
-                key={q.id}
+                key={question.id}
                 style={{
-                  background: "#ffffff",
                   borderRadius: 12,
-                  padding: 16,
                   border: "1px solid #e5e7eb",
-                  boxShadow: "0 1px 2px rgba(15,23,42,.04)",
+                  padding: 16,
+                  background: "#ffffff",
                 }}
               >
-                <h3
-                  style={{
-                    margin: 0,
-                    marginBottom: 4,
-                    fontSize: "1rem",
-                    fontWeight: 600,
-                    color: "#111827",
-                  }}
-                >
-                  {q.text}{" "}
-                  {q.required && (
-                    <span style={{ color: "#dc2626" }}>*</span>
-                  )}
-                </h3>
-
-                <p
-                  style={{
-                    margin: 0,
-                    marginBottom: 8,
-                    color: "#6b7280",
-                    fontSize: 13,
-                  }}
-                >
-                  Tipo:{" "}
-                  {q.question_type === "scale"
-                    ? "Escala (1 a 5)"
-                    : "Texto libre"}
-                  {" · "}
-                  Respuestas: <strong>{respuestas.length}</strong>
-                </p>
-
-                {q.question_type === "scale" ? (
-                  respuestas.length === 0 ? (
-                    <p style={{ color: "#9ca3af", fontSize: 13 }}>
-                      Aún no hay respuestas.
-                    </p>
-                  ) : (
-                    <div style={{ fontSize: 14 }}>
-                      {stats.prom != null && (
-                        <p style={{ margin: "4px 0" }}>
-                          Promedio:{" "}
-                          <strong>{stats.prom.toFixed(2)}</strong>
-                        </p>
-                      )}
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: 12,
-                          flexWrap: "wrap",
-                          marginTop: 4,
-                        }}
-                      >
-                        {Object.entries(stats.conteo).map(([val, cant]) => (
-                          <span
-                            key={val}
-                            style={{
-                              padding: "4px 8px",
-                              borderRadius: 999,
-                              background: "#eef2ff",
-                              color: "#4f46e5",
-                              fontSize: 12,
-                            }}
-                          >
-                            {val}: {cant}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )
-                ) : respuestas.length === 0 ? (
-                  <p style={{ color: "#9ca3af", fontSize: 13 }}>
-                    Aún no hay respuestas.
-                  </p>
-                ) : (
-                  <ul
+                <div style={{ marginBottom: 4 }}>
+                  <div
                     style={{
-                      marginTop: 6,
-                      paddingLeft: 18,
-                      fontSize: 14,
-                      color: "#374151",
+                      fontSize: 16,
+                      fontWeight: 600,
+                      marginBottom: 2,
                     }}
                   >
-                    {respuestas.map((r) => (
-                      <li key={r.id}>{r.response}</li>
-                    ))}
-                  </ul>
+                    {question.text}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: "#6b7280",
+                    }}
+                  >
+                    Tipo: {question.question_type} · Respuestas: {total}
+                  </div>
+                </div>
+
+                {/* Métricas numéricas si aplica */}
+                {numericAvg !== null && (
+                  <div style={{ marginBottom: 8 }}>
+                    <div
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 600,
+                        marginBottom: 4,
+                      }}
+                    >
+                      Promedio
+                    </div>
+                    <div style={{ fontSize: 28, fontWeight: 700 }}>
+                      {numericAvg.toFixed(2)}
+                    </div>
+                  </div>
+                )}
+
+                {/* Distribución si la calculamos */}
+                {distribution && (
+                  <div style={{ marginBottom: 8 }}>
+                    <div
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 600,
+                        marginBottom: 4,
+                      }}
+                    >
+                      Distribución de respuestas
+                    </div>
+                    <ul
+                      style={{
+                        listStyle: "none",
+                        padding: 0,
+                        margin: 0,
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: 8,
+                      }}
+                    >
+                      {Object.entries(distribution).map(([value, count]) => (
+                        <li
+                          key={value}
+                          style={{
+                            padding: "4px 10px",
+                            borderRadius: 999,
+                            border: "1px solid #e5e7eb",
+                            fontSize: 12,
+                          }}
+                        >
+                          {value}: {count}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Listado de respuestas textuales si no es numérica */}
+                {numericAvg === null && total > 0 && (
+                  <div>
+                    <div
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 600,
+                        marginBottom: 4,
+                      }}
+                    >
+                      Respuestas
+                    </div>
+                    <ul style={{ margin: 0, paddingLeft: 18, fontSize: 14 }}>
+                      {answers.map((a) => (
+                        <li key={a.id}>{a.response}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {total === 0 && (
+                  <div style={{ fontSize: 13, color: "#9ca3af" }}>
+                    Todavía no hay respuestas para esta pregunta.
+                  </div>
                 )}
               </div>
             );

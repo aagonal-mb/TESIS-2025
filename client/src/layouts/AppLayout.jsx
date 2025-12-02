@@ -63,7 +63,7 @@ export default function AppLayout({ children }) {
                   <span>Crear usuario</span>
                 </NavLink>
                 <NavLink to="/admin/usuarios">
-                  <span>Modificar usuario</span>
+                  <span>Gestión de Usuarios</span>
                 </NavLink>
               </div>
             </div>

@@ -7,7 +7,7 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import MePage from "./pages/MePage";
 
-import SurveysList from "./components/SurveysList.jsx";
+import SurveysPage from "./pages/SurveysPage.jsx";
 import SurveyDetailPage from "./pages/SurveyDetailPage.jsx";
 import SurveyBuilderPage from "./pages/SurveyBuilderPage.jsx";
 
@@ -18,40 +18,63 @@ import SurveyResponsesPage from "./pages/SurveyResponsesPage.jsx";
 
 import AppLayout from "./layouts/AppLayout";
 
+import ForgotPasswordPage from "./pages/ForgotPasswordPage.jsx";
+import ResetPasswordPage from "./pages/ResetPasswordPage.jsx";
+import ReportsPage from "./pages/ReportsPage.jsx";
+import SurveyReportPage from "./pages/SurveyReportPage.jsx";
+import SentSurveysPage from "./pages/SentSurveysPage.jsx";
+
 export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* público */}
+          {/* PÚBLICAS */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route
+            path="/reset-password/:uid/:token"
+            element={<ResetPasswordPage />}
+          />
 
-          {/* inicio = listado de encuestas */}
+          {/* HOME → redirige a /surveys dentro del layout protegido */}
           <Route
             path="/"
             element={
               <ProtectedRoute>
                 <AppLayout>
-                  <SurveysList />
+                  <Navigate to="/surveys" replace />
                 </AppLayout>
               </ProtectedRoute>
             }
           />
 
-          {/* mismo listado, pero en /surveys */}
+          {/* PERFIL */}
+          <Route
+            path="/me"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <MePage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* ENCUESTAS: LISTA */}
           <Route
             path="/surveys"
             element={
               <ProtectedRoute>
                 <AppLayout>
-                  <SurveysList />
+                  <SurveysPage />
                 </AppLayout>
               </ProtectedRoute>
             }
           />
 
-          {/* crear encuestas */}
+          {/* ENCUESTAS: CREAR */}
           <Route
             path="/surveys/new"
             element={
@@ -63,47 +86,7 @@ export default function App() {
             }
           />
 
-          {/* encuestas respondidas (tabla resumen) */}
-          <Route
-            path="/surveys/responses"
-            element={
-              <ProtectedRoute>
-                <AppLayout>
-                  <AdminSurveyResponsesPage />
-                </AppLayout>
-              </ProtectedRoute>
-            }
-          />
-
-          {/* detalle de respuestas de UNA encuesta */}
-          <Route
-            path="/admin/surveys/:id/responses"
-            element={
-              <ProtectedRoute>
-                <AppLayout>
-                  <SurveyResponsesPage />
-                </AppLayout>
-              </ProtectedRoute>
-            }
-          />
-
-          {/* placeholder de encuestas enviadas (para que no rompa) */}
-          <Route
-            path="/surveys/sent"
-            element={
-              <ProtectedRoute>
-                <AppLayout>
-                  <div style={{ padding: 24 }}>
-                    La sección "Encuestas enviadas" está planificada para
-                    próximos módulos. En esta entrega se priorizó la creación
-                    y respuesta de encuestas.
-                  </div>
-                </AppLayout>
-              </ProtectedRoute>
-            }
-          />
-
-          {/* ver detalle y responder encuesta */}
+          {/* ENCUESTAS: DETALLE / RESPONDER */}
           <Route
             path="/surveys/:id"
             element={
@@ -115,7 +98,55 @@ export default function App() {
             }
           />
 
-          {/* admin usuarios */}
+          {/* ADMIN: LISTA DE ENCUESTAS RESPONDIDAS */}
+          <Route
+            path="/surveys/responses"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <AdminSurveyResponsesPage />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* ADMIN: RESPUESTAS DE UNA ENCUESTA */}
+<Route
+  path="/surveys/responses/:id"
+  element={
+    <ProtectedRoute>
+      <AppLayout>
+        <SurveyResponsesPage />
+      </AppLayout>
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/surveys/:id/responses"   // 👈 segunda forma de URL
+  element={
+    <ProtectedRoute>
+      <AppLayout>
+        <SurveyResponsesPage />
+      </AppLayout>
+    </ProtectedRoute>
+  }
+/>
+
+{/* ENCUESTAS: ENVIADAS (solo admin) */}
+<Route
+  path="/surveys/sent"
+  element={
+    <ProtectedRoute>
+      <AppLayout>
+        <SentSurveysPage />
+      </AppLayout>
+    </ProtectedRoute>
+  }
+/>
+
+
+          {/* USUARIOS – ADMIN */}
           <Route
             path="/admin/usuarios"
             element={
@@ -128,7 +159,7 @@ export default function App() {
           />
 
           <Route
-            path="/admin/usuarios/new"
+            path="/admin/usuarios/new"  // 👈 coincide con el NavLink "Crear usuario"
             element={
               <ProtectedRoute>
                 <AppLayout>
@@ -138,34 +169,31 @@ export default function App() {
             }
           />
 
-          {/* placeholder reportes generales */}
+          {/* REPORTES */}
           <Route
             path="/reports"
             element={
               <ProtectedRoute>
                 <AppLayout>
-                  <div style={{ padding: 24 }}>
-                    Módulo de reportes generales en desarrollo.
-                  </div>
+                  <ReportsPage />
                 </AppLayout>
               </ProtectedRoute>
             }
           />
 
-          {/* mi perfil */}
           <Route
-            path="/me"
+            path="/reports/surveys/:id"
             element={
               <ProtectedRoute>
                 <AppLayout>
-                  <MePage />
+                  <SurveyReportPage />
                 </AppLayout>
               </ProtectedRoute>
             }
           />
 
-          {/* cualquier otra cosa → home */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+          {/* CUALQUIER OTRA RUTA → LOGIN */}
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

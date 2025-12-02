@@ -30,7 +30,7 @@ export default function SurveyResponsesPage() {
         const [surveyRes, questionsRes, answersRes, usuariosRes] =
           await Promise.all([
             getSurvey(id),
-            api.get("surveys/surveys/${id}/questions/"),
+            api.get(`surveys/surveys/${id}/questions/`),
             api.get("surveys/answers/"),
             api.get("accounts/usuarios/"),
           ]);
@@ -61,9 +61,11 @@ export default function SurveyResponsesPage() {
         usuarios.forEach((u) => {
           const authId = u.user && u.user.id;
           if (authId == null) return;
-          const fullName = ${u.nombre || ""} ${u.apellido || ""}.trim();
-          const fallback = (u.user && u.user.username) || Usuario ${authId};
+
+          const fullName = `${u.nombre || ""} ${u.apellido || ""}`.trim();
+          const fallback = (u.user && u.user.username) || `Usuario ${authId}`;
           const name = fullName || fallback;
+
           userNameByAuthId.set(authId, name);
         });
 
@@ -73,7 +75,7 @@ export default function SurveyResponsesPage() {
           .map((a) => {
             const q = questionById.get(a.question);
             const userName =
-              userNameByAuthId.get(a.user) || Usuario ${a.user};
+              userNameByAuthId.get(a.user) || `Usuario ${a.user}`;
             return {
               id: a.id,
               questionText: q.text,
@@ -85,8 +87,8 @@ export default function SurveyResponsesPage() {
         setSurvey(surveyData);
         setRows(tableRows);
       } catch (e) {
-          console.error(e);
-          setErr("No se pudieron cargar las respuestas de esta encuesta.");
+        console.error(e);
+        setErr("No se pudieron cargar las respuestas de esta encuesta.");
       } finally {
         if (!cancelled) {
           setLoading(false);

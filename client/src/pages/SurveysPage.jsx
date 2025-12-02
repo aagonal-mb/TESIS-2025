@@ -1,9 +1,6 @@
-import { SurveysList } from '../components/SurveysList';
-import { QuestionsList } from '../components/QuestionList';
-import { IdCard } from 'lucide-react';
+// client/src/pages/SurveysPage.jsx
+import { SurveysList } from "../components/SurveysList";
 
-export function SurveysPage() {
+export default function SurveysPage() {
   return <SurveysList />;
 }
-
-export default SurveysPage;

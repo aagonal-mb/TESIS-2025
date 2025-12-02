@@ -158,4 +158,18 @@ SIMPLE_JWT = {
     "BLACKLIST_AFTER_ROTATION": True,
 }
 
-    
+# URL base del frontend (para armar el link del mail)
+FRONTEND_URL = "http://localhost:5173"
+
+# ---------- CONFIGURACIÓN DE EMAIL (GMAIL) ----------
+
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+
+# Esta CUENTA es la que va a usar LA APLICACIÓN para ENVIAR correos
+EMAIL_HOST_USER = "tu.cuenta.de.app@gmail.com"  # <-- poné el correo de la app
+EMAIL_HOST_PASSWORD = "TU_APP_PASSWORD_AQUI"    # <-- contraseña de app, no la normal
+
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER

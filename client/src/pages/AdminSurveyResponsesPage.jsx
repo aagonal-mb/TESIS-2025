@@ -204,22 +204,21 @@ export default function AdminSurveyResponsesPage() {
                   <td style={tdStyle}>{formatDate(row.createdAt)}</td>
                   <td style={tdStyle}>
                     <button
-                      type="button"
-                      onClick={() =>
-                        nav(/admin/surveys/${row.id}/responses)
-                      }
-                      style={{
-                        border: "none",
-                        background: "#4f46e5",
-                        color: "#ffffff",
-                        cursor: "pointer",
-                        borderRadius: 999,
-                        padding: "4px 12px",
-                        fontSize: 12,
-                      }}
-                    >
-                      Ver respuestas
-                    </button>
+  type="button"
+  onClick={() => nav(`/surveys/responses/${row.id}`)}  // 👈 CAMBIO ACÁ
+  style={{
+    border: "none",
+    background: "#4f46e5",
+    color: "#ffffff",
+    cursor: "pointer",
+    borderRadius: 999,
+    padding: "4px 12px",
+    fontSize: 12,
+  }}
+>
+  Ver respuestas
+</button>
+
                   </td>
                 </tr>
               ))}
