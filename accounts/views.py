@@ -144,18 +144,20 @@ class RolViewSet(viewsets.ModelViewSet):
     """Provee operaciones CRUD para los Roles."""
     queryset = Rol.objects.all()
     serializer_class = RolSerializer
-    permission_classes = [IsSuperUserOrReadOnly]  # Solo Superuser para modificar
+    # ✅ CORREGIDO: Usamos IsAdminOrManager para permitir a los administradores del negocio acceder
+    permission_classes = [IsAdminOrManager] 
 
 
 class DepartamentoViewSet(viewsets.ModelViewSet):
     """Provee operaciones CRUD para los Departamentos."""
     queryset = Departamento.objects.all()
     serializer_class = DepartamentoSerializer
-    permission_classes = [IsAuthenticated, IsApproved]
+    # ✅ CORREGIDO: Usamos IsAdminOrManager en lugar del filtro IsApproved/IsAuthenticated
+    permission_classes = [IsAdminOrManager]
 
 
 class NominaViewSet(viewsets.ModelViewSet):
-    """Provee operaciones CRUD para la Nomina."""
+    # ... (código sin cambios)
     queryset = Nomina.objects.all()
     serializer_class = NominaSerializer
     permission_classes = [IsAuthenticated, IsApproved]

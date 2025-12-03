@@ -56,14 +56,17 @@ class UserAuthSerializer(serializers.ModelSerializer):
 
 
 class UsuarioSerializer(serializers.ModelSerializer):
-    # Campos que representan relaciones con datos anidados
+    # ✅ CORRECCIÓN 1: Campos para exponer el NOMBRE del rol y departamento (solo lectura)
+    # Usamos source para acceder a la propiedad 'nombre_rol' a través de la FK 'id_rol'
+    rol_nombre = serializers.CharField(source="id_rol.nombre_rol", read_only=True) 
+    
+    # Usamos source para acceder a la propiedad 'nombre_area' a través de la FK 'id_departamento'
+    departamento_nombre = serializers.CharField(source="id_departamento.nombre_area", read_only=True, allow_null=True) 
+    
+    # Campo anidado para la data completa del User de Auth (mantener si se usa en el frontend)
     user = UserAuthSerializer(read_only=True)
-    id_rol_data = RolSerializer(source="id_rol", read_only=True)
-    id_departamento_data = DepartamentoSerializer(
-        source="id_departamento", read_only=True
-    )
-
-    # Campo para la clave foránea simple (solo ID en escritura)
+    
+    # Campos que se usan para la ESCRITURA (POST/PUT), permitiendo solo la ID de la FK
     id_rol = serializers.PrimaryKeyRelatedField(
         queryset=Rol.objects.all(), write_only=True
     )
@@ -84,17 +87,18 @@ class UsuarioSerializer(serializers.ModelSerializer):
             "correo",
             "is_approved",
             "user",
+            # Campos FK para escritura (write_only=True)
             "id_rol",
             "id_nomina",
             "id_departamento",
-            # Campos anidados solo para lectura
-            "id_rol_data",
-            "id_departamento_data",
+            # ✅ Campos de lectura que exponen el nombre (Rol y Departamento)
+            "rol_nombre", 
+            "departamento_nombre", 
         )
         read_only_fields = ("user",)  # La relación OneToOne se maneja en la vista
 
 
-# --- Serializers de Logs y Tareas de Importación ---
+# --- Serializers de Logs y Tareas de Importación (sin cambios) ---
 
 
 class ActivityLogSerializer(serializers.ModelSerializer):
@@ -134,7 +138,7 @@ class ImportJobSerializer(serializers.ModelSerializer):
         )
 
 
-# --- Serializer de Notificaciones ---
+# --- Serializer de Notificaciones (sin cambios) ---
 
 
 class NotificationSerializer(serializers.ModelSerializer):
@@ -160,7 +164,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         token["is_superuser"] = user.is_superuser
 
         # Datos del perfil de negocio (Usuario)
-        biz = getattr(user, "biz", None)  # por el related_name="biz"
+        biz = getattr(user, "biz", None)
         if biz:
             token["id_usuario"] = biz.id_usuario
             token["nombre"] = biz.nombre
@@ -172,12 +176,13 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
                 token["rol"] = biz.id_rol.nombre_rol  # ej: "admin", "manager", "user"
 
             if biz.id_departamento:
-                token["departamento"] = biz.id_departamento.nombre_departamento
+                # ✅ CORRECCIÓN 2: El campo en el modelo es 'nombre_area'
+                token["departamento"] = biz.id_departamento.nombre_area 
 
         return token
 
 
-# --- Registro de usuarios (self-service) ---
+# --- Registro de usuarios (self-service) (sin cambios) ---
 
 
 class RegisterSerializer(serializers.Serializer):
@@ -224,7 +229,6 @@ class RegisterSerializer(serializers.Serializer):
         )
 
         # 2) Usar (o crear) el Usuario de negocio asociado a ese User
-        #    Si tenés un signal, acá lo encuentra; si no, lo crea.
         usuario, created = Usuario.objects.get_or_create(user=user)
 
         # 3) Cargar todos los datos de negocio en ese Usuario

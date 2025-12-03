@@ -1,5 +1,5 @@
 // client/src/pages/AdminCreateUserPage.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react"; // ✅ Importación ÚNICA y limpia de hooks
 import api from "../api/api";
 import { useAuth } from "../context/AuthContext";
 
@@ -21,12 +21,48 @@ export default function AdminCreateUserPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
+  
+  // 💡 ESTADO para las listas de opciones (Roles y Departamentos)
+  const [roles, setRoles] = useState([]);
+  const [departamentos, setDepartamentos] = useState([]);
+  const [dataLoading, setDataLoading] = useState(true);
 
   const isAdmin =
     user?.rol === "admin" ||
     user?.isSuperuser === true ||
     user?.is_superuser === true;
 
+  // --- Carga de Roles y Departamentos (al montar el componente) ---
+  useEffect(() => {
+    let cancelled = false;
+    async function loadOptions() {
+      setDataLoading(true);
+      try {
+        // Obtenemos los roles y departamentos que ya creaste en Django
+        const [rolesRes, deptosRes] = await Promise.all([
+          api.get("accounts/roles/"),
+          api.get("accounts/departamentos/"),
+        ]);
+        
+        if (cancelled) return;
+        
+        setRoles(rolesRes.data);
+        setDepartamentos(deptosRes.data);
+
+      } catch (e) {
+        console.error("Error cargando opciones de rol/departamento:", e);
+      } finally {
+        if (!cancelled) {
+          setDataLoading(false);
+        }
+      }
+    }
+    loadOptions();
+    return () => {
+      cancelled = true;
+    };
+  }, []); // El array vacío asegura que solo se ejecute una vez al inicio
+  
   if (!isAdmin) {
     return (
       <div style={{ padding: 24 }}>
@@ -37,7 +73,10 @@ export default function AdminCreateUserPage() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    setForm((prev) => ({ 
+      ...prev, 
+      [name]: value === "" ? "" : value 
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -57,36 +96,42 @@ export default function AdminCreateUserPage() {
       apellido: form.apellido,
       correo: form.correo,
       documento: form.documento || "",
+      
+      // ✅ Enviamos el ID o NULL si no se seleccionó nada
       id_rol: form.id_rol || null,
       id_nomina: form.id_nomina || null,
       id_departamento: form.id_departamento || null,
-      // Si tu serializer lo acepta, esto lo deja aprobado de una:
-      // is_approved: true,
     };
 
     setLoading(true);
     try {
-      await api.post("auth/register/", payload);
+      await api.post("auth/register/", payload); 
       setSuccess("Usuario creado correctamente ✅");
       setForm(initialForm);
     } catch (e) {
       console.error(e);
-      const detail =
-        e?.response?.data?.detail ||
-        e?.response?.data?.username?.[0] ||
-        e?.response?.data?.correo?.[0];
-      setError(detail || "No se pudo crear el usuario.");
+      const data = e?.response?.data;
+      let detail = "No se pudo crear el usuario.";
+
+      if (data) {
+        detail = data.username?.[0] || data.correo?.[0] || data.detail || JSON.stringify(data);
+      }
+      
+      setError(detail);
     } finally {
       setLoading(false);
     }
   };
 
+  if (loading || dataLoading) {
+    return <div style={{ maxWidth: 640, margin: "2rem auto", padding: "0 1rem" }}>Cargando datos y opciones...</div>;
+  }
+  
   return (
-    <div style={{ maxWidth: 640, margin: "0 auto" }}>
+    <div style={{ maxWidth: 640, margin: "2rem auto", padding: "0 1rem" }}>
       <h1 style={{ marginBottom: 8 }}>Crear usuario</h1>
       <p style={{ marginBottom: 24, color: "#4b5563" }}>
-        Desde acá podés cargar manualmente un empleado sin que pase
-        por el formulario público de registro.
+        Desde acá podés cargar manualmente un empleado.
       </p>
 
       {error && (
@@ -97,6 +142,7 @@ export default function AdminCreateUserPage() {
       )}
 
       <form onSubmit={handleSubmit} className="auth-form">
+        {/* CAMPOS BÁSICOS (Mantenidos) */}
         <div className="auth-field">
           <label>Usuario</label>
           <input
@@ -159,34 +205,52 @@ export default function AdminCreateUserPage() {
           />
         </div>
 
+        <hr style={{ margin: "1.5rem 0" }} />
+        <h2 style={{ fontSize: "1.2rem", fontWeight: 600, color: "#111827", marginBottom: "1rem" }}>Asignación</h2>
+        
+        {/* ✅ SELECTOR DE ROL */}
         <div className="auth-field">
-          <label>ID Rol (opcional)</label>
-          <input
+          <label>Rol</label>
+          <select
             className="auth-input"
             name="id_rol"
             value={form.id_rol}
             onChange={handleChange}
-            placeholder="p. ej. 1"
-          />
+          >
+            <option value="">Seleccionar Rol (Opcional)</option>
+            {roles.map((rol) => (
+              <option key={rol.id_rol} value={rol.id_rol}>
+                {rol.nombre_rol}
+              </option>
+            ))}
+          </select>
         </div>
 
+        {/* ✅ SELECTOR DE DEPARTAMENTO */}
+        <div className="auth-field">
+          <label>Departamento</label>
+          <select
+            className="auth-input"
+            name="id_departamento"
+            value={form.id_departamento}
+            onChange={handleChange}
+          >
+            <option value="">Seleccionar Departamento (Opcional)</option>
+            {departamentos.map((depto) => (
+              <option key={depto.id_departamento} value={depto.id_departamento}>
+                {depto.nombre_area}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Campo ID NÓMINA (mantenido) */}
         <div className="auth-field">
           <label>ID Nómina (opcional)</label>
           <input
             className="auth-input"
             name="id_nomina"
             value={form.id_nomina}
-            onChange={handleChange}
-            placeholder="p. ej. 1"
-          />
-        </div>
-
-        <div className="auth-field">
-          <label>ID Departamento (opcional)</label>
-          <input
-            className="auth-input"
-            name="id_departamento"
-            value={form.id_departamento}
             onChange={handleChange}
             placeholder="p. ej. 1"
           />
