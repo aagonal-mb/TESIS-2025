@@ -1,10 +1,11 @@
 // client/src/pages/SurveyAssignmentPage.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react'; // <-- AGREGAR 'useCallback'
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api/api';
 import { useAuth } from '../context/AuthContext';
 // Importamos las funciones API necesarias
-import { getRoles, getDepartamentos, getUsersList } from '../api/accounts.api'; // Asumiendo que accounts.api.js existe
+// Asumiendo que accounts.api.js existe y exporta estas funciones
+import { getRoles, getDepartamentos, getUsersList } from '../api/accounts.api'; 
 
 export default function SurveyAssignmentPage() {
     const { id: surveyId } = useParams();
@@ -19,41 +20,57 @@ export default function SurveyAssignmentPage() {
     // Estado para el formulario de nueva asignación
     const [assignmentTarget, setAssignmentTarget] = useState({ 
         type: 'rol', // 'rol', 'departamento', 'user'
-        id: ''      // ID del Rol/Depto/User seleccionado
+        id: ''      // ID del Rol/Depto/User seleccionado
     });
     const [saving, setSaving] = useState(false);
 
     const isAdmin = user?.rol?.toLowerCase() === "admin" || user?.is_superuser;
 
-    // --- Carga de Listas y Asignaciones Existentes ---
+    // --- FUNCIÓN CENTRAL DE CARGA (usamos useCallback para optimizar) ---
+    // Mover la lógica de carga fuera del useEffect
+    const loadData = useCallback(async () => {
+        // No establecer loading a true aquí si ya lo hizo el useEffect, 
+        // pero sí si se llama después de crear una asignación.
+        // Lo ponemos por si se llama desde el formulario.
+        setError(null); 
+        try {
+            const [rolesRes, deptosRes, assignmentsRes] = await Promise.all([
+                getRoles(),
+                getDepartamentos(),
+                api.get(`surveys/assignments/?survey_id=${surveyId}`),
+            ]);
+
+            setRoles(rolesRes.data);
+            setDepartamentos(deptosRes.data);
+            // Asegúrate de que las respuestas de Django tengan la estructura esperada (data)
+            setAssignments(assignmentsRes.data); 
+
+        } catch (e) {
+            setError("Error al cargar datos de asignación (Roles/Deptos o Asignaciones).");
+            console.error(e);
+            throw e; // Lanzar el error para ser manejado por el caller si es necesario
+        } 
+    }, [surveyId]); // Dependencias: solo surveyId
+
+    // --- Carga Inicial de Listas y Asignaciones Existentes ---
     useEffect(() => {
-        if (!isAdmin) return;
+        if (!isAdmin) {
+             setLoading(false); 
+             return; 
+        }
         
-        async function loadData() {
-            setLoading(true);
-            setError(null);
+        async function initialLoad() {
+            setLoading(true); // Se establece al inicio
             try {
-                // 1. Cargar las listas de referencia (Roles/Deptos)
-                const [rolesRes, deptosRes, assignmentsRes] = await Promise.all([
-                    getRoles(),
-                    getDepartamentos(),
-                    // 2. Cargar asignaciones existentes para ESTA encuesta
-                    api.get(`surveys/assignments/?survey_id=${surveyId}`),
-                ]);
-
-                setRoles(rolesRes.data);
-                setDepartamentos(deptosRes.data);
-                setAssignments(assignmentsRes.data);
-
+                await loadData();
             } catch (e) {
-                setError("Error al cargar datos de asignación.");
-                console.error(e);
+                // El error ya fue manejado por loadData
             } finally {
-                setLoading(false);
+                setLoading(false); // Se establece al final, pase lo que pase
             }
         }
-        loadData();
-    }, [surveyId, isAdmin]);
+        initialLoad();
+    }, [isAdmin, loadData]); // Dependencias: isAdmin y loadData (por ser useCallback)
 
 
     // --- Manejo del Formulario de Asignación ---
@@ -73,31 +90,33 @@ export default function SurveyAssignmentPage() {
         setSaving(true);
         let payload = { survey: surveyId };
 
-        // Definir el campo de asignación basado en el tipo
         if (assignmentTarget.type === 'rol') {
             payload['assigned_rol'] = assignmentTarget.id;
         } else if (assignmentTarget.type === 'departamento') {
             payload['assigned_departamento'] = assignmentTarget.id;
-        } else {
-             // Si quieres asignar a un usuario individual (opcional)
-             // payload['assigned_user'] = assignmentTarget.id; 
-        }
+        } // No se maneja 'user' en este ejemplo
+        
 
         try {
             await api.post('surveys/assignments/', payload);
-            setAssignmentTarget({ type: 'rol', id: '' });
-            await loadData(); // Recargar la lista de asignaciones
+            setAssignmentTarget(prev => ({ ...prev, id: '' })); // Limpiar solo el ID seleccionado
+            await loadData(); // ⭐ LLAMADA REUTILIZADA
+            // Mostrar un mensaje de éxito si es necesario
         } catch (e) {
             console.error("Error al crear asignación:", e.response?.data);
-            const detail = e.response?.data?.non_field_errors?.[0] || "Error: Ya existe o los datos son inválidos.";
+            // Mostrar error de validación de Django
+            const detail = e.response?.data?.non_field_errors?.[0] || e.response?.data?.detail || "Error: Ya existe o los datos son inválidos.";
             setError(detail);
         } finally {
             setSaving(false);
         }
     };
     
+    // ... (El resto del código de handleDeleteAssignment y la vista HTML es idéntico) ...
+
+
     const handleDeleteAssignment = async (id) => {
-         if (!window.confirm("¿Seguro que deseas eliminar esta asignación?")) return;
+        if (!window.confirm("¿Seguro que deseas eliminar esta asignación?")) return;
          try {
              await api.delete(`surveys/assignments/${id}/`);
              setAssignments(prev => prev.filter(a => a.id !== id));
@@ -108,7 +127,11 @@ export default function SurveyAssignmentPage() {
     };
 
 
-    if (!isAdmin) { /* ... (Permiso de acceso) ... */ }
+    if (!isAdmin) {
+         return <div style={{ padding: 24, color: '#dc2626' }}>Acceso denegado. Se requiere ser administrador para esta funcionalidad.</div>;
+    }
+    
+    // ⭐ El spinner de carga ahora se mostrará y desaparecerá correctamente
     if (loading) return <div style={{ padding: 24 }}>Cargando asignaciones...</div>;
 
     // Helper para obtener el texto del objetivo
@@ -127,7 +150,7 @@ export default function SurveyAssignmentPage() {
                 Si no hay asignaciones, estará disponible para todos los usuarios.
             </p>
 
-            {error && <div style={{ marginBottom: 12, color: "#dc2626" }}>{error}</div>}
+            {error && <div style={{ marginBottom: 12, color: "#dc2626", padding: 12, border: '1px solid #dc2626', background: '#fee2e2', borderRadius: 4 }}>{error}</div>}
 
             {/* --- Formulario de Nueva Asignación --- */}
             <form onSubmit={handleCreateAssignment} style={{ padding: 16, border: '1px solid #3b82f6', borderRadius: 8, marginBottom: 32, background: '#f0f4ff' }}>
@@ -164,9 +187,11 @@ export default function SurveyAssignmentPage() {
                         >
                             <option value="">-- Seleccionar ID --</option>
                             {assignmentTarget.type === 'rol' && roles.map(r => (
+                                // Asegúrate de que el key y el value son correctos según tu API
                                 <option key={r.id_rol} value={r.id_rol}>{r.nombre_rol}</option>
                             ))}
                             {assignmentTarget.type === 'departamento' && departamentos.map(d => (
+                                // Asegúrate de que el key y el value son correctos según tu API
                                 <option key={d.id_departamento} value={d.id_departamento}>{d.nombre_area}</option>
                             ))}
                             {/* Si habilitas la asignación por usuario, cargarías la lista de usuarios aquí */}
@@ -187,6 +212,10 @@ export default function SurveyAssignmentPage() {
             {/* --- Lista de Asignaciones Actuales --- */}
             <h2 style={{ fontSize: "1.2rem", fontWeight: 600, color: "#111827", marginBottom: 12 }}>Asignaciones Existentes ({assignments.length})</h2>
             
+            {assignments.length === 0 && (
+                 <p style={{ color: "#4b5563" }}>Esta encuesta no tiene asignaciones. Estará disponible para todos los usuarios.</p>
+            )}
+
             <ul style={{ listStyle: 'none', padding: 0 }}>
                 {assignments.map(a => (
                     <li key={a.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #eee', alignItems: 'center' }}>
@@ -200,7 +229,8 @@ export default function SurveyAssignmentPage() {
                                 color: '#dc2626', 
                                 border: 'none', 
                                 cursor: 'pointer',
-                                fontSize: 13
+                                fontSize: 13,
+                                padding: 5
                             }}
                         >
                             Eliminar
