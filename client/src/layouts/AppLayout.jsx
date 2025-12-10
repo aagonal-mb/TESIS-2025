@@ -19,7 +19,16 @@ export default function AppLayout({ children }) {
   return (
     <div className="app-shell">
       <aside className="app-sidebar">
-        <div className="app-logo">TESIS · HR Surveys</div>
+        <div
+  style={{
+    fontSize: 20,
+    fontWeight: 800,
+    letterSpacing: "0.04em",
+    color: "#111827", // bien oscuro para que se lea
+    marginBottom: 4,
+  }}
+>HR Surveys
+</div>
 
         <nav className="app-nav">
           {/* INICIO */}

@@ -536,3 +536,16 @@ body {
   color: #111827;
   font-weight: 600;
 }
+
+/* Títulos principales de la app */
+h1,
+h2 {
+  color: #111827 !important; /* gris bien oscuro, casi negro */
+  font-weight: 700;
+}
+
+/* Títulos secundarios (por si los usamos después) */
+h3 {
+  color: #111827;
+  font-weight: 600;
+}

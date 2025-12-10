@@ -3,6 +3,16 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/api";
 import { useAuth } from "../context/AuthContext";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  CartesianGrid,
+} from "recharts";
 
 export default function ReportsPage() {
   const { user } = useAuth();
@@ -104,6 +114,29 @@ export default function ReportsPage() {
     }
   });
 
+  // Datos para el gráfico comparativo: encuestas vs participación
+  const chartData = surveys.map((s) => {
+    const ans = answersBySurvey.get(s.id) || [];
+    const peopleForSurvey = peopleBySurvey.get(s.id) || new Set();
+
+    const shortTitle =
+      s.title && s.title.length > 30
+        ? s.title.slice(0, 27) + "..."
+        : s.title || `Encuesta ${s.id}`;
+
+    return {
+      id: s.id,
+      name: shortTitle,
+      respuestas: ans.length,
+      participantes: peopleForSurvey.size,
+    };
+  });
+
+  // Ordenamos por cantidad de respuestas (de mayor a menor)
+  const chartDataTop = [...chartData].sort(
+    (a, b) => b.respuestas - a.respuestas
+  );
+
   return (
     <div style={{ maxWidth: 1000, margin: "0 auto" }}>
       <h1
@@ -140,53 +173,149 @@ export default function ReportsPage() {
       )}
 
       {!loading && !err && surveys.length > 0 && (
-        <div
-          style={{
-            borderRadius: 12,
-            border: "1px solid #e5e7eb",
-            overflow: "hidden",
-            background: "#ffffff",
-          }}
-        >
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead style={{ background: "#f9fafb" }}>
-              <tr>
-                <th style={thStyle}>Encuesta</th>
-                <th style={thStyle}>Preguntas</th>
-                <th style={thStyle}>Respuestas</th>
-                <th style={thStyle}>Personas</th>
-                <th style={thStyle}>Creada</th>
-                <th style={thStyle}>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {surveys.map((s) => {
-                const qs = questionsBySurvey.get(s.id) || [];
-                const ans = answersBySurvey.get(s.id) || [];
-                const peopleSetForSurvey = peopleBySurvey.get(s.id) || new Set();
+        <>
+          {/* GRÁFICO COMPARATIVO */}
+          {chartDataTop.length > 0 && (
+            <div
+              style={{
+                borderRadius: 12,
+                border: "1px solid #e5e7eb",
+                padding: 16,
+                background: "#ffffff",
+                marginBottom: 24,
+              }}
+            >
+              <h2
+                style={{
+                  fontSize: 18,
+                  marginTop: 0,
+                  marginBottom: 4,
+                  fontWeight: 600,
+                  color: "#111827",
+                }}
+              >
+                Participación por encuesta
+              </h2>
+              <p
+                style={{
+                  marginTop: 0,
+                  marginBottom: 12,
+                  fontSize: 13,
+                  color: "#6b7280",
+                }}
+              >
+                Comparación de encuestas según la cantidad de respuestas
+                registradas y personas que participaron en cada una.
+              </p>
 
-                return (
-                  <tr key={s.id} style={{ borderTop: "1px solid #e5e7eb" }}>
-                    <td style={tdStyle}>{s.title}</td>
-                    <td style={tdStyle}>{qs.length}</td>
-                    <td style={tdStyle}>{ans.length}</td>
-                    <td style={tdStyle}>{peopleSetForSurvey.size}</td>
-                    <td style={tdStyle}>{formatDate(s.created_at)}</td>
-                    <td style={tdStyle}>
-                      <button
-                        type="button"
-                        style={btnPrimary}
-                        onClick={() => navigate(`/reports/surveys/${s.id}`)}
-                      >
-                        Ver reporte
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+              <div style={{ width: "100%", height: 280 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartDataTop}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis allowDecimals={false} />
+                    <Tooltip
+                      formatter={(value, name) => {
+                        if (name === "respuestas") {
+                          return [
+                            `${value} respuesta${
+                              value === 1 ? "" : "s"
+                            }`,
+                            "Respuestas",
+                          ];
+                        }
+                        if (name === "participantes") {
+                          return [
+                            `${value} persona${
+                              value === 1 ? "" : "s"
+                            }`,
+                            "Participantes",
+                          ];
+                        }
+                        return [value, name];
+                      }}
+                    />
+                    <Legend />
+                    <Bar dataKey="respuestas" fill="#4f46e5" />
+                    <Bar dataKey="participantes" fill="#38bdf8" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
+
+          {/* TABLA POR ENCUESTA */}
+          <div
+            style={{
+              borderRadius: 12,
+              border: "1px solid #e5e7eb",
+              overflow: "hidden",
+              background: "#ffffff",
+            }}
+          >
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead style={{ background: "#f9fafb" }}>
+                <tr>
+                  <th style={thStyle}>Encuesta</th>
+                  <th style={thStyle}>Preguntas</th>
+                  <th style={thStyle}>Respuestas</th>
+                  <th style={thStyle}>Personas</th>
+                  <th style={thStyle}>Completitud</th>
+                  <th style={thStyle}>Creada</th>
+                  <th style={thStyle}>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {surveys.map((s) => {
+                  const qs = questionsBySurvey.get(s.id) || [];
+                  const ans = answersBySurvey.get(s.id) || [];
+                  const peopleSetForSurvey =
+                    peopleBySurvey.get(s.id) || new Set();
+
+                  // % de completitud aproximado para esta encuesta
+                  let completionRate = 0;
+                  const totalSlots =
+                    qs.length * peopleSetForSurvey.size;
+                  if (totalSlots > 0) {
+                    completionRate = Math.round(
+                      (ans.length / totalSlots) * 100
+                    );
+                    if (completionRate > 100) completionRate = 100;
+                  }
+
+                  return (
+                    <tr
+                      key={s.id}
+                      style={{ borderTop: "1px solid #e5e7eb" }}
+                    >
+                      <td style={tdStyle}>{s.title}</td>
+                      <td style={tdStyle}>{qs.length}</td>
+                      <td style={tdStyle}>{ans.length}</td>
+                      <td style={tdStyle}>
+                        {peopleSetForSurvey.size}
+                      </td>
+                      <td style={tdStyle}>{completionRate}%</td>
+                      <td style={tdStyle}>
+                        {formatDate(s.created_at)}
+                      </td>
+                      <td style={tdStyle}>
+                        <button
+                          type="button"
+                          style={btnPrimary}
+                          onClick={() =>
+                            navigate(`/reports/surveys/${s.id}`)
+                          }
+                        >
+                          Ver reporte
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );

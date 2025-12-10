@@ -3,6 +3,16 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import api from "../api/api";
 import { useAuth } from "../context/AuthContext";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+  LabelList,
+} from "recharts";
 
 export default function SurveyReportPage() {
   const { id } = useParams(); // id de la encuesta
@@ -63,32 +73,25 @@ export default function SurveyReportPage() {
   const handlePrint = () => {
     if (!reportRef.current) return;
 
-    const title = survey ? `Reporte - ${survey.title}` : "Reporte de encuesta";
     const contenido = reportRef.current.innerHTML;
-
-    const printWindow = window.open("", "_blank", "width=900,height=650");
+    const printWindow = window.open("", "_blank", "width=800,height=600");
     if (!printWindow) return;
 
-    printWindow.document.open();
+    const title = survey ? `Reporte - ${survey.title}` : "Reporte de encuesta";
+
     printWindow.document.write(`
-      <!DOCTYPE html>
       <html>
         <head>
-          <meta charset="utf-8" />
           <title>${title}</title>
           <style>
-            * {
-              box-sizing: border-box;
-              font-family: system-ui, -apple-system, BlinkMacSystemFont,
-                "Segoe UI", sans-serif;
-            }
             body {
+              font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
               margin: 0;
-              padding: 24px;
-              background: #ffffff;
+              padding: 16px;
+              background: #f3f4f6;
             }
-            h1, h2, h3, h4, h5 {
-              margin-top: 0;
+            h1, h2, h3, h4, h5, h6 {
+              color: #111827;
             }
             .card {
               border-radius: 12px;
@@ -128,18 +131,56 @@ export default function SurveyReportPage() {
 
   const totalQuestions = questions.length;
   const totalAnswers = answers.length;
+
+  // personas que participaron en la encuesta (respondieron al menos algo)
   const peopleSet = new Set();
   answers.forEach((a) => {
     if (a.user != null) peopleSet.add(a.user);
   });
   const totalPeople = peopleSet.size;
 
+  // respuestas agrupadas por pregunta
   const answersByQuestion = new Map();
   answers.forEach((a) => {
     if (!answersByQuestion.has(a.question)) {
       answersByQuestion.set(a.question, []);
     }
     answersByQuestion.get(a.question).push(a);
+  });
+
+  // porcentaje de completitud global
+  let completionRate = 0;
+  const totalSlots = totalQuestions * totalPeople;
+  if (totalSlots > 0) {
+    completionRate = Math.round((totalAnswers / totalSlots) * 100);
+    if (completionRate > 100) completionRate = 100;
+  }
+
+  // datos para el gráfico:
+  // para cada pregunta → % de participantes que la respondieron
+  const chartData = questions.map((q, index) => {
+    const qAnswers = answersByQuestion.get(q.id) || [];
+    const peopleForQuestion = new Set();
+    qAnswers.forEach((a) => {
+      if (a.user != null) peopleForQuestion.add(a.user);
+    });
+    const peopleCount = peopleForQuestion.size;
+
+    let coverage = 0;
+    if (totalPeople > 0) {
+      coverage = Math.round((peopleCount / totalPeople) * 100);
+      if (coverage > 100) coverage = 100;
+    }
+
+    return {
+      key: `P${index + 1}`,
+      shortText:
+        q.text && q.text.length > 60
+          ? q.text.slice(0, 57) + "..."
+          : q.text || "",
+      cobertura: coverage,
+      respuestas: qAnswers.length,
+    };
   });
 
   return (
@@ -158,9 +199,9 @@ export default function SurveyReportPage() {
           <h1
             style={{
               fontSize: 24,
-              margin: 0,
+              marginTop: 0,
+              marginBottom: 4,
               fontWeight: 700,
-              color: "#111827",
             }}
           >
             Reporte de encuesta
@@ -176,21 +217,24 @@ export default function SurveyReportPage() {
           <Link to="/reports" style={linkBtn}>
             ← Volver a reportes
           </Link>
-          <button type="button" style={printBtn} onClick={handlePrint}>
+          <button type="button" onClick={handlePrint} style={printBtn}>
             Descargar PDF
           </button>
         </div>
       </div>
 
-      {/* CONTENIDO QUE VA AL PDF */}
+      {/* CONTENIDO DEL REPORTE (sí se imprime) */}
       <div ref={reportRef}>
         {loading && <div>Cargando reporte...</div>}
-        {err && (
-          <div style={{ color: "#dc2626", marginBottom: 12 }}>{err}</div>
+        {err && <div style={{ color: "#dc2626" }}>{err}</div>}
+
+        {!loading && !err && !survey && (
+          <div>No se encontró la encuesta solicitada.</div>
         )}
 
         {!loading && !err && survey && (
           <>
+            {/* RESUMEN + KPIs + GRÁFICO */}
             <div
               className="card"
               style={{
@@ -207,6 +251,7 @@ export default function SurveyReportPage() {
                   marginTop: 0,
                   marginBottom: 8,
                   fontWeight: 600,
+                  color: "#111827",
                 }}
               >
                 Resumen de la encuesta
@@ -227,7 +272,7 @@ export default function SurveyReportPage() {
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                  gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
                   gap: 12,
                 }}
               >
@@ -237,9 +282,90 @@ export default function SurveyReportPage() {
                   label="Personas participantes"
                   value={totalPeople}
                 />
+                <MiniKpi
+                  label="Completitud global"
+                  value={`${completionRate}%`}
+                />
+              </div>
+
+              {/* Gráfico de % de participantes por pregunta */}
+              <div style={{ marginTop: 24 }}>
+                <h3
+                  style={{
+                    fontSize: 16,
+                    marginTop: 0,
+                    marginBottom: 4,
+                    fontWeight: 600,
+                    color: "#111827",
+                  }}
+                >
+                  Cobertura de preguntas
+                </h3>
+                <p
+                  style={{
+                    marginTop: 0,
+                    marginBottom: 12,
+                    fontSize: 13,
+                    color: "#6b7280",
+                  }}
+                >
+                  Porcentaje de personas participantes que respondió cada
+                  pregunta de la encuesta.
+                </p>
+                {chartData.length === 0 ? (
+                  <p
+                    style={{ fontSize: 13, color: "#6b7280", margin: 0 }}
+                  >
+                    Aún no hay respuestas suficientes para graficar.
+                  </p>
+                ) : (
+                  <div style={{ width: "100%", height: 260 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={chartData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="key" />
+                        <YAxis
+                          domain={[0, 100]}
+                          tickFormatter={(v) => `${v}%`}
+                        />
+                        <Tooltip
+                          formatter={(value, name, props) => {
+                            if (name === "cobertura") {
+                              return [`${value}%`, "Cobertura"];
+                            }
+                            if (name === "respuestas") {
+                              return [
+                                `${value} respuesta${
+                                  value === 1 ? "" : "s"
+                                }`,
+                                "Respuestas",
+                              ];
+                            }
+                            return [value, name];
+                          }}
+                          labelFormatter={(_, payload) => {
+                            const item = payload && payload[0];
+                            if (item && item.payload.shortText) {
+                              return item.payload.shortText;
+                            }
+                            return "";
+                          }}
+                        />
+                        <Bar dataKey="cobertura" fill="#4f46e5">
+                          <LabelList
+                            dataKey="cobertura"
+                            position="top"
+                            formatter={(v) => `${v}%`}
+                          />
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
               </div>
             </div>
 
+            {/* LISTADO DE PREGUNTAS */}
             <div
               style={{ display: "flex", flexDirection: "column", gap: 12 }}
             >
@@ -269,9 +395,10 @@ export default function SurveyReportPage() {
                         <div
                           style={{
                             fontSize: 12,
-                            color: "#6b7280",
                             textTransform: "uppercase",
                             letterSpacing: "0.04em",
+                            color: "#6b7280",
+                            marginBottom: 4,
                           }}
                         >
                           Pregunta {index + 1}
@@ -279,16 +406,27 @@ export default function SurveyReportPage() {
                         <div
                           style={{
                             fontSize: 15,
-                            fontWeight: 500,
+                            fontWeight: 600,
                             color: "#111827",
+                            marginBottom: 4,
                           }}
                         >
                           {q.text}
                         </div>
                       </div>
-                      <div style={{ fontSize: 13, color: "#6b7280" }}>
-                        Tipo: <strong>{q.question_type}</strong> · Respuestas:{" "}
-                        <strong>{qAnswers.length}</strong>
+
+                      <div
+                        style={{
+                          fontSize: 12,
+                          color: "#6b7280",
+                          textAlign: "right",
+                        }}
+                      >
+                        <span style={{ fontWeight: 600 }}>Tipo:</span>{" "}
+                        <span style={{ fontWeight: 600 }}>
+                          {q.type}
+                        </span>{" "}
+                        · Respuestas: {qAnswers.length}
                       </div>
                     </div>
 
@@ -298,10 +436,11 @@ export default function SurveyReportPage() {
                           marginTop: 8,
                           marginBottom: 0,
                           fontSize: 13,
-                          color: "#9ca3af",
+                          color: "#6b7280",
                         }}
                       >
-                        Aún no hay respuestas registradas para esta pregunta.
+                        Aún no hay respuestas registradas para esta
+                        pregunta.
                       </p>
                     )}
 
@@ -338,9 +477,10 @@ function MiniKpi({ label, value }) {
   return (
     <div
       style={{
-        borderRadius: 10,
+        borderRadius: 12,
         border: "1px solid #e5e7eb",
         padding: 12,
+        background: "#ffffff",
       }}
     >
       <div
@@ -349,7 +489,7 @@ function MiniKpi({ label, value }) {
           textTransform: "uppercase",
           letterSpacing: "0.04em",
           color: "#6b7280",
-          marginBottom: 2,
+          marginBottom: 4,
         }}
       >
         {label}
@@ -363,7 +503,7 @@ function MiniKpi({ label, value }) {
 
 const linkBtn = {
   borderRadius: 999,
-  border: "1px solid #e5e7eb",
+  border: "none",
   padding: "6px 12px",
   fontSize: 13,
   textDecoration: "none",
